@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const SKILL_NAME: &str = "create-file-outlne";
+const SKILL_NAME: &str = "create-file-outline";
 
 fn main() {
     println!("cargo:rerun-if-changed=skills/{SKILL_NAME}/SKILL.md");

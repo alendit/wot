@@ -1,6 +1,6 @@
 ---
-name: create-file-outlne
-description: Use when the user asks for a compact file outline, table of contents, TOC, section map, line ranges, or agent-friendly overview of source, config, or document files using the wot CLI.
+name: create-file-outline
+description: Use before broad file reads when the user asks to inspect, summarize, navigate, or understand source, config, docs, notebooks, or multiple files; use for compact file outlines, table of contents, TOCs, section maps, line ranges, and agent-friendly overviews with the wot CLI.
 ---
 
 # Create File Outline
@@ -16,7 +16,7 @@ cd /Users/dimitrivorona/projects/rust/wot
 cargo install --path . --root /Users/dimitrivorona/.local --force
 ```
 
-During release builds, Cargo copies this skill to `/Users/dimitrivorona/.agents/skills/create-file-outlne/SKILL.md`. Set `WOT_SKIP_SKILL_INSTALL=1` to skip that side effect.
+During release builds, Cargo copies this skill to `/Users/dimitrivorona/.agents/skills/create-file-outline/SKILL.md`. Set `WOT_SKIP_SKILL_INSTALL=1` to skip that side effect.
 
 ## Usage
 
@@ -47,12 +47,14 @@ Defaults:
 
 ## Workflow
 
-1. Prefer plain `wot <file>` for small-file verbatim context and ranged outlines for larger files.
-2. Use `wot --min-lines 0` when line-numbered outlines are required even for small files.
-3. Use `wot --max-depth 2` for quick overviews and `--max-depth 3` or higher when the user needs more structure.
-4. Pass multiple files in the order the user should read them.
-5. If a file fails, read stderr; `wot` continues processing later files and exits nonzero when any file fails.
-6. For unsupported file types, use `--language LANG` when the intended language is known.
+1. Before opening many supported files or a large supported file with `cat`, `sed`, or an editor, run `wot` first to get the structure and line ranges.
+2. Prefer plain `wot <file>` for small-file verbatim context and ranged outlines for larger files.
+3. Use `wot --min-lines 0` when line-numbered outlines are required even for small files.
+4. Use `wot --max-depth 2` for quick overviews and `--max-depth 3` or higher when the user needs more structure.
+5. Read exact source ranges with normal file tools after `wot` identifies the relevant sections.
+6. Pass multiple files in the order the user should read them.
+7. If a file fails, read stderr; `wot` continues processing later files and exits nonzero when any file fails.
+8. For unsupported file types, use `--language LANG` when the intended language is known.
 
 ## Examples
 

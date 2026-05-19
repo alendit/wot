@@ -10,7 +10,7 @@ Install the CLI and bundled Codex skill from this checkout:
 cargo install --path . --root ~/.local --force
 ```
 
-This installs `wot` into `~/.local/bin` and copies the `create-file-outlne` skill into `~/.agents/skills`.
+This installs `wot` into `~/.local/bin` and copies the `create-file-outline` skill into `~/.agents/skills`.
 
 ## Usage
 

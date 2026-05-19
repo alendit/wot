@@ -94,7 +94,7 @@ The product shape has five major parts:
   helpers, but not on CLI rendering.
 - `src/renderer.rs` is the output boundary for Markdown, JSON, supported-language
   lists, truncation metadata, and verbatim entries.
-- `skills/create-file-outlne/SKILL.md` is a bundled agent-facing usage surface.
+- `skills/create-file-outline/SKILL.md` is a bundled agent-facing usage surface.
 - `tests/` owns parser, renderer, language detection, source mapping, and CLI
   behavior coverage.
 - `build.rs` owns release-time skill installation and should stay independent of
@@ -165,7 +165,7 @@ budgeting, stdin, forced language parsing, and lenient parse mode.
 
 ### Skill Installer
 
-`build.rs` installs `skills/create-file-outlne/SKILL.md` into the local Codex
+`build.rs` installs `skills/create-file-outline/SKILL.md` into the local Codex
 skills directory during release builds. This is a developer-machine integration,
 not a runtime dependency of the parser. `WOT_SKIP_SKILL_INSTALL=1` disables it for
 environments that need pure builds.
@@ -208,7 +208,7 @@ later successful files before the process exits nonzero.
 - The JSON response schema has top-level `files` and `errors` arrays. Outline
   entries include `nodes`, `truncated`, and `omitted_nodes`; verbatim entries
   include `content`.
-- `skills/create-file-outlne/SKILL.md` is the bundled Codex skill surface and
+- `skills/create-file-outline/SKILL.md` is the bundled Codex skill surface and
   intentionally points agents back to `wot --help` for current details.
 
 ## Extension Points
