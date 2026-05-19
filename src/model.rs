@@ -14,6 +14,18 @@ pub enum Language {
     Hcl,
     Dockerfile,
     Notebook,
+    Rust,
+    TypeScript,
+    JavaScript,
+    Go,
+    C,
+    Cpp,
+    Java,
+    Kotlin,
+    CSharp,
+    Shell,
+    Clojure,
+    Elisp,
 }
 
 impl Language {
@@ -30,6 +42,18 @@ impl Language {
         }
 
         match path.extension().and_then(|extension| extension.to_str()) {
+            Some("rs") => Some(Self::Rust),
+            Some("ts" | "tsx" | "mts" | "cts") => Some(Self::TypeScript),
+            Some("js" | "jsx" | "mjs" | "cjs") => Some(Self::JavaScript),
+            Some("go") => Some(Self::Go),
+            Some("c" | "h") => Some(Self::C),
+            Some("cc" | "cpp" | "cxx" | "hpp" | "hh" | "hxx") => Some(Self::Cpp),
+            Some("java") => Some(Self::Java),
+            Some("kt" | "kts") => Some(Self::Kotlin),
+            Some("cs") => Some(Self::CSharp),
+            Some("sh" | "bash" | "zsh") => Some(Self::Shell),
+            Some("clj" | "cljs" | "cljc" | "bb") => Some(Self::Clojure),
+            Some("el") => Some(Self::Elisp),
             Some("md" | "markdown") => Some(Self::Markdown),
             Some("py") => Some(Self::Python),
             Some("json") => Some(Self::Json),
@@ -58,6 +82,18 @@ impl fmt::Display for Language {
             Self::Hcl => write!(formatter, "hcl"),
             Self::Dockerfile => write!(formatter, "dockerfile"),
             Self::Notebook => write!(formatter, "notebook"),
+            Self::Rust => write!(formatter, "rust"),
+            Self::TypeScript => write!(formatter, "typescript"),
+            Self::JavaScript => write!(formatter, "javascript"),
+            Self::Go => write!(formatter, "go"),
+            Self::C => write!(formatter, "c"),
+            Self::Cpp => write!(formatter, "cpp"),
+            Self::Java => write!(formatter, "java"),
+            Self::Kotlin => write!(formatter, "kotlin"),
+            Self::CSharp => write!(formatter, "csharp"),
+            Self::Shell => write!(formatter, "shell"),
+            Self::Clojure => write!(formatter, "clojure"),
+            Self::Elisp => write!(formatter, "elisp"),
         }
     }
 }
@@ -92,6 +128,12 @@ pub enum NodeKind {
     DockerStage,
     DockerInstruction,
     NotebookCell,
+    Import,
+    Export,
+    Type,
+    Method,
+    Component,
+    Module,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -60,6 +60,26 @@ fn outlines_structured_files_from_the_cli() {
 }
 
 #[test]
+fn outlines_tree_sitter_code_files_from_the_cli() {
+    let directory = tempdir().unwrap();
+    let rust = directory.path().join("lib.rs");
+    let shell = directory.path().join("build.sh");
+    fs::write(&rust, "pub struct App;\n\npub fn run() {}\n").unwrap();
+    fs::write(&shell, "build() {\n  echo build\n}\n").unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command.args([rust.as_os_str(), shell.as_os_str()]);
+
+    command.assert().success().stdout(
+        predicate::str::contains(format!("# {}", rust.display()))
+            .and(predicate::str::contains("- struct App [L1]"))
+            .and(predicate::str::contains("- fn run [L3]"))
+            .and(predicate::str::contains(format!("# {}", shell.display())))
+            .and(predicate::str::contains("- function build [L1-L3]")),
+    );
+}
+
+#[test]
 fn applies_max_depth_to_cli_output() {
     let directory = tempdir().unwrap();
     let markdown = directory.path().join("doc.md");

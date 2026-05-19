@@ -13,7 +13,7 @@ const DEFAULT_MAX_DEPTH: usize = 3;
 #[command(
     name = "wot",
     about = "Create compact outlines from source, config, and document files",
-    long_about = "Create compact Markdown table-of-contents style outlines from source, config, and document files.\n\nSupported inputs include Markdown, Python, JSON, YAML, TOML, INI, .env, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.\n\nRanges are 1-based inclusive line ranges. When line-only ranges would be ambiguous, wot prints 1-based start-inclusive/end-exclusive columns as Lx:Cy-Lx:Cz."
+    long_about = "Create compact Markdown table-of-contents style outlines from source, config, and document files.\n\nSupported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, .env, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.\n\nRanges are 1-based inclusive line ranges. When line-only ranges would be ambiguous, wot prints 1-based start-inclusive/end-exclusive columns as Lx:Cy-Lx:Cz."
 )]
 struct Args {
     #[arg(long, default_value_t = DEFAULT_MAX_DEPTH)]

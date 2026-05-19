@@ -5,6 +5,67 @@ use wot::model::Language;
 #[test]
 fn detects_structured_file_extensions_and_special_names() {
     assert_eq!(
+        Language::from_path(Path::new("lib.rs")),
+        Some(Language::Rust)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("component.tsx")),
+        Some(Language::TypeScript)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("app.js")),
+        Some(Language::JavaScript)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("main.go")),
+        Some(Language::Go)
+    );
+    assert_eq!(Language::from_path(Path::new("main.c")), Some(Language::C));
+    assert_eq!(
+        Language::from_path(Path::new("header.h")),
+        Some(Language::C)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("app.cpp")),
+        Some(Language::Cpp)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("app.cc")),
+        Some(Language::Cpp)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("app.cxx")),
+        Some(Language::Cpp)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("app.hpp")),
+        Some(Language::Cpp)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("App.java")),
+        Some(Language::Java)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("App.kt")),
+        Some(Language::Kotlin)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("App.cs")),
+        Some(Language::CSharp)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("script.sh")),
+        Some(Language::Shell)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("core.clj")),
+        Some(Language::Clojure)
+    );
+    assert_eq!(
+        Language::from_path(Path::new("demo.el")),
+        Some(Language::Elisp)
+    );
+    assert_eq!(
         Language::from_path(Path::new("config.yaml")),
         Some(Language::Yaml)
     );

@@ -5,6 +5,8 @@ use crate::model::{Language, Outline};
 
 mod structured;
 
+mod tree_sitter_code;
+
 pub mod dockerfile;
 pub mod dotenv;
 pub mod hcl;
@@ -34,5 +36,17 @@ pub fn parse_file(path: &Path, source: &str, max_depth: usize) -> Result<Outline
         Language::Hcl => hcl::parse(path, source, max_depth),
         Language::Dockerfile => dockerfile::parse(path, source, max_depth),
         Language::Notebook => notebook::parse(path, source, max_depth),
+        Language::Rust
+        | Language::TypeScript
+        | Language::JavaScript
+        | Language::Go
+        | Language::C
+        | Language::Cpp
+        | Language::Java
+        | Language::Kotlin
+        | Language::CSharp
+        | Language::Shell
+        | Language::Clojure
+        | Language::Elisp => tree_sitter_code::parse(path, source, language, max_depth),
     }
 }

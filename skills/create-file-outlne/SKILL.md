@@ -5,7 +5,7 @@ description: Use when the user asks for a compact file outline, table of content
 
 # Create File Outline
 
-Use `wot` to produce compact Markdown outlines of supported files for agent context. It supports Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.
+Use `wot` to produce compact Markdown outlines of supported files for agent context. It supports Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.
 
 ## Install
 
@@ -46,6 +46,6 @@ Defaults:
 ## Examples
 
 ```bash
-wot README.md src/main.py package.json config.yaml Cargo.toml Dockerfile
-wot --max-depth 2 docs/spec.md src/app.py analysis.ipynb
+wot README.md src/lib.rs src/main.py package.json config.yaml Cargo.toml Dockerfile
+wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 ```
