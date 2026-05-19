@@ -26,11 +26,16 @@ Run:
 wot [OPTIONS] <file>...
 ```
 
+Prefer `wot --help` for current flag details and `wot --list-supported` for the
+installed language ids, extensions, special filenames, and parser backends. The
+notes below capture the behavior this skill relies on, but the CLI help is the
+source of truth.
+
 Defaults:
 
 - `--max-depth` defaults to `3`.
 - `--max-items` defaults to `200`.
-- `--min-lines` defaults to `80`; recognized files at or below that line count print verbatim.
+- `--min-lines` defaults to `40`; recognized files at or below that line count print verbatim.
 - Inputs are explicit files by default; `--stdin` reads stdin and requires `--language`.
 - Output is Markdown by default. Use `--format json` for machine-readable output.
 - Markdown file headers are off by default. Use `--header` to print `# path/to/file`.
@@ -42,17 +47,18 @@ Defaults:
 
 ## Workflow
 
-1. Prefer plain `wot <file>` for small files when verbatim context is useful.
-2. Use `wot --min-lines 0 --max-depth 2` for outline-only quick overviews and `--max-depth 3` or higher when the user needs more structure.
-3. Pass multiple files in the order the user should read them.
-4. If a file fails, read stderr; `wot` continues processing later files and exits nonzero when any file fails.
-5. For unsupported file types, use `--language LANG` when the intended language is known.
+1. Prefer plain `wot <file>` for small-file verbatim context and ranged outlines for larger files.
+2. Use `wot --min-lines 0` when line-numbered outlines are required even for small files.
+3. Use `wot --max-depth 2` for quick overviews and `--max-depth 3` or higher when the user needs more structure.
+4. Pass multiple files in the order the user should read them.
+5. If a file fails, read stderr; `wot` continues processing later files and exits nonzero when any file fails.
+6. For unsupported file types, use `--language LANG` when the intended language is known.
 
 ## Examples
 
 ```bash
 wot README.md src/lib.rs src/main.py package.json config.yaml Cargo.toml Dockerfile
-wot --min-lines 0 --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
+wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0
 ```

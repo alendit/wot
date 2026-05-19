@@ -1,5 +1,5 @@
 use wot::model::{Language, NodeKind, Outline, OutlineNode, SourceRange};
-use wot::renderer::render_markdown;
+use wot::renderer::{render_markdown, RenderedFile};
 
 #[test]
 fn renders_file_header_and_nested_nodes_with_ranges() {
@@ -19,8 +19,10 @@ fn renders_file_header_and_nested_nodes_with_ranges() {
         }],
     };
 
+    let files = vec![RenderedFile::outline(outline, 200)];
+
     assert_eq!(
-        render_markdown(&outline),
+        render_markdown(&files, true),
         "# sample.py\n- class Greeter [L1-L8]\n  - def hello [L2-L4]\n"
     );
 }
@@ -38,8 +40,10 @@ fn renders_precise_single_line_ranges_with_columns() {
         }],
     };
 
+    let files = vec![RenderedFile::outline(outline, 200)];
+
     assert_eq!(
-        render_markdown(&outline),
+        render_markdown(&files, true),
         "# data.json\n- a: 1 [L1:C2-L1:C7]\n"
     );
 }

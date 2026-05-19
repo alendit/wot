@@ -1,0 +1,16 @@
+# Changelog
+
+## 0.1.0 - 2026-05-20
+
+Initial public release of `wot`.
+
+- Compact Markdown outlines and machine-readable JSON output for source, config,
+  and document files.
+- Parser support for Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#,
+  shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, `.env`,
+  XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.
+- CLI controls for supported-language listing, opt-in headers, node budgets,
+  small-file verbatim mode, forced language parsing, stdin input, and lenient
+  partial parsing where supported.
+- Bundled Codex skill for agent-friendly file outline workflows.
+- GitHub Actions CI for formatting, Clippy, and tests.

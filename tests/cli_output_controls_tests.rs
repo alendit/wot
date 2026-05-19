@@ -6,7 +6,7 @@ use serde_json::Value;
 use tempfile::tempdir;
 
 #[test]
-fn markdown_headers_are_opt_in_and_small_files_render_verbatim_by_default() {
+fn markdown_headers_are_opt_in_and_min_lines_enables_verbatim_output() {
     let directory = tempdir().unwrap();
     let markdown = directory.path().join("doc.md");
     fs::write(&markdown, "# Intro\nbody\n").unwrap();
@@ -20,17 +20,24 @@ fn markdown_headers_are_opt_in_and_small_files_render_verbatim_by_default() {
         .stdout(predicate::str::contains(format!("# {}", markdown.display())).not());
 
     let mut outline_command = Command::cargo_bin("wot").unwrap();
+    outline_command.args(["--min-lines", "0"]).arg(&markdown);
     outline_command
-        .args(["--header", "--min-lines", "0"])
+        .assert()
+        .success()
+        .stdout("- Intro [L1-L2]\n");
+
+    let mut verbatim_command = Command::cargo_bin("wot").unwrap();
+    verbatim_command
+        .args(["--header", "--min-lines", "40"])
         .arg(&markdown);
-    outline_command
+    verbatim_command
         .assert()
         .success()
         .stdout(predicate::str::contains(format!(
             "# {}",
             markdown.display()
         )))
-        .stdout(predicate::str::contains("- Intro [L1-L2]"));
+        .stdout(predicate::str::contains("# Intro\nbody\n"));
 }
 
 #[test]

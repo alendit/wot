@@ -18,24 +18,28 @@ This installs `wot` into `~/.local/bin` and copies the `create-file-outlne` skil
 wot [OPTIONS] <file>...
 ```
 
+`wot --help` is the authoritative command reference for flags and defaults.
+Use `wot --list-supported` to see the exact recognized language ids, file
+extensions, special filenames, and parser backends for the installed build.
+
 Examples:
 
 ```bash
 wot README.md src/lib.rs src/main.py data.json config.yaml Cargo.toml Dockerfile
-wot --min-lines 0 --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
+wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0
 wot --list-supported
 ```
 
-By default, `wot` prints recognized files of 80 lines or fewer verbatim. Larger files print compact Markdown outline items such as `- def run [L10-L18]`; pass `--min-lines 0` to force outlines for every file. Same-line JSON sections may include columns such as `L1:C2-L1:C7`.
+By default, `wot` prints recognized files of 40 lines or fewer verbatim. Larger files print compact Markdown outline items such as `- def run [L10-L18]`; pass `--min-lines 0` to force outlines for every file. Same-line JSON sections may include columns such as `L1:C2-L1:C7`.
 
 Useful options:
 
 - `--format markdown|json` chooses text or machine-readable output.
 - `--header` prints file headers in Markdown output.
 - `--max-items N` caps outline nodes; default is `200`.
-- `--min-lines N` prints recognized files at or below `N` lines verbatim; default is `80`.
+- `--min-lines N` prints recognized files at or below `N` lines verbatim; default is `40`.
 - `--language LANG` forces parsing as a supported language.
 - `--stdin` reads stdin and requires `--language`.
 - `--lenient` enables safe partial parsing for YAML, TOML, HCL, and XML.
