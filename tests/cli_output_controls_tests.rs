@@ -226,3 +226,52 @@ fn lenient_mode_returns_partial_structured_outlines() {
         .stdout(predicate::str::contains("- resource \"x\" \"y\""))
         .stdout(predicate::str::contains("- root"));
 }
+
+#[test]
+fn setup_installs_project_agent_skill_by_default() {
+    let directory = tempdir().unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command.arg("setup").current_dir(directory.path());
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(".agents"))
+        .stdout(predicate::str::contains("create-file-outline"));
+
+    let skill = directory
+        .path()
+        .join(".agents/skills/create-file-outline/SKILL.md");
+    let content = fs::read_to_string(skill).unwrap();
+    assert!(content.contains("name: create-file-outline"));
+}
+
+#[test]
+fn setup_global_and_claude_install_to_home_roots() {
+    let directory = tempdir().unwrap();
+    let home = tempdir().unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command
+        .args(["setup", "-g", "--claude"])
+        .current_dir(directory.path())
+        .env("HOME", home.path());
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(".agents"))
+        .stdout(predicate::str::contains(".claude"));
+
+    let agents_skill = home
+        .path()
+        .join(".agents/skills/create-file-outline/SKILL.md");
+    let claude_skill = home
+        .path()
+        .join(".claude/skills/create-file-outline/SKILL.md");
+    assert!(fs::read_to_string(agents_skill)
+        .unwrap()
+        .contains("name: create-file-outline"));
+    assert!(fs::read_to_string(claude_skill)
+        .unwrap()
+        .contains("name: create-file-outline"));
+}

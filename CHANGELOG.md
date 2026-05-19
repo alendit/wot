@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add `wot setup` to explicitly install the bundled skill into project-local or
+  global agent skill roots, with optional Claude skill installation.
+- Stop installing skills as a `cargo install` build side effect.
+
 ## 0.1.0 - 2026-05-20
 
 Initial public release of `wot`.

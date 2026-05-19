@@ -1,8 +1,9 @@
+use std::env;
 use std::fs;
 use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 
-use clap::{Parser, ValueEnum};
+use clap::{Args as ClapArgs, Parser, Subcommand, ValueEnum};
 
 use crate::error::{Error, Result};
 use crate::model::Language;
@@ -12,6 +13,8 @@ use crate::renderer::{self, RenderError, RenderedFile};
 const DEFAULT_MAX_DEPTH: usize = 3;
 const DEFAULT_MAX_ITEMS: usize = 200;
 const DEFAULT_MIN_LINES: usize = 40;
+const SKILL_NAME: &str = "create-file-outline";
+const SKILL_CONTENT: &str = include_str!("../skills/create-file-outline/SKILL.md");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum OutputFormat {
@@ -23,9 +26,13 @@ enum OutputFormat {
 #[command(
     name = "wot",
     about = "Create compact outlines from source, config, and document files",
+    override_usage = "wot [OPTIONS] <file>...\n       wot setup [OPTIONS]",
     long_about = "Create compact Markdown table-of-contents style outlines from source, config, and document files.\n\nSupported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, .env, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.\n\nRanges are 1-based inclusive line ranges. When line-only ranges would be ambiguous, wot prints 1-based start-inclusive/end-exclusive columns as Lx:Cy-Lx:Cz."
 )]
 struct Args {
+    #[command(subcommand)]
+    command: Option<Command>,
+
     #[arg(long, default_value_t = DEFAULT_MAX_DEPTH)]
     max_depth: usize,
 
@@ -56,6 +63,25 @@ struct Args {
     files: Vec<PathBuf>,
 }
 
+#[derive(Debug, Subcommand)]
+enum Command {
+    #[command(about = "Install the bundled agent skill")]
+    Setup(SetupArgs),
+}
+
+#[derive(Debug, ClapArgs)]
+struct SetupArgs {
+    #[arg(
+        short = 'g',
+        long,
+        help = "Install to the user home skill roots instead of the current project"
+    )]
+    global: bool,
+
+    #[arg(help = "Also install to .claude/skills or ~/.claude/skills", long)]
+    claude: bool,
+}
+
 pub fn run() -> Result<()> {
     let args = Args::parse();
     run_with_config(args)
@@ -63,6 +89,7 @@ pub fn run() -> Result<()> {
 
 pub fn run_with_args(files: Vec<PathBuf>, max_depth: usize) -> Result<()> {
     run_with_config(Args {
+        command: None,
         files,
         max_depth,
         format: OutputFormat::Markdown,
@@ -77,6 +104,12 @@ pub fn run_with_args(files: Vec<PathBuf>, max_depth: usize) -> Result<()> {
 }
 
 fn run_with_config(args: Args) -> Result<()> {
+    if let Some(command) = &args.command {
+        return match command {
+            Command::Setup(setup_args) => setup(setup_args),
+        };
+    }
+
     if args.list_supported {
         return list_supported(&args);
     }
@@ -215,6 +248,64 @@ fn cli_error(message: impl Into<String>) -> Result<()> {
     Err(Error::Parse {
         path: PathBuf::from("wot"),
         message: message.into(),
+    })
+}
+
+fn setup(args: &SetupArgs) -> Result<()> {
+    let destinations = setup_destinations(args)?;
+    for destination in &destinations {
+        install_skill(destination)?;
+        println!("installed {SKILL_NAME} skill to {}", destination.display());
+    }
+    Ok(())
+}
+
+fn setup_destinations(args: &SetupArgs) -> Result<Vec<PathBuf>> {
+    let base = if args.global {
+        home_dir()?
+    } else {
+        env::current_dir().map_err(|source| Error::Io {
+            path: PathBuf::from("."),
+            source,
+        })?
+    };
+
+    let mut destinations = vec![skill_destination(&base, ".agents")];
+    if args.claude {
+        destinations.push(skill_destination(&base, ".claude"));
+    }
+    Ok(destinations)
+}
+
+fn home_dir() -> Result<PathBuf> {
+    env::var_os("HOME")
+        .map(PathBuf::from)
+        .ok_or_else(|| Error::Parse {
+            path: PathBuf::from("wot"),
+            message: "HOME is not set".into(),
+        })
+}
+
+fn skill_destination(base: &Path, root_name: &str) -> PathBuf {
+    base.join(root_name)
+        .join("skills")
+        .join(SKILL_NAME)
+        .join("SKILL.md")
+}
+
+fn install_skill(destination: &Path) -> Result<()> {
+    fs::create_dir_all(
+        destination
+            .parent()
+            .expect("skill destination has a parent"),
+    )
+    .map_err(|source| Error::Io {
+        path: destination.to_path_buf(),
+        source,
+    })?;
+    fs::write(destination, SKILL_CONTENT).map_err(|source| Error::Io {
+        path: destination.to_path_buf(),
+        source,
     })
 }
 

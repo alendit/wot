@@ -18,13 +18,13 @@ errors to stdout/stderr.
 - architecture overview: L29-L61
 - boundaries and invariants: L63-L82
 - repository mapping: L84-L101
-- components: L103-L171
-- data and control flow: L173-L197
-- public surfaces: L199-L212
-- extension points: L214-L224
-- testing and verification: L226-L240
-- change management: L242-L247
-- architecture discussion: L249-L269
+- components: L103-L172
+- data and control flow: L174-L198
+- public surfaces: L200-L216
+- extension points: L218-L228
+- testing and verification: L230-L244
+- change management: L246-L251
+- architecture discussion: L253-L273
 
 ## Architecture Overview
 
@@ -43,7 +43,7 @@ flowchart LR
     Parsers --> Model
     CLI --> Renderer["Markdown and JSON renderer"]
     Renderer --> User
-    Build["Release build script"] --> Skill["Bundled Codex skill"]
+    CLI --> Skill["Bundled agent skill setup"]
     Tests["Parser, renderer, CLI tests"] --> CLI
     Tests --> Parsers
     Tests --> Renderer
@@ -78,8 +78,8 @@ The product shape has five major parts:
   limits parser traversal before rendering.
 - `--min-lines` defaults to `40` and only applies after language recognition. It never converts
   unsupported files into accepted input.
-- Release builds intentionally have a local side effect: `build.rs` copies the
-  bundled skill unless `WOT_SKIP_SKILL_INSTALL=1` is set.
+- `cargo install` must not write agent configuration as a build side effect.
+  `wot setup` owns skill installation explicitly.
 
 ## Repository Mapping
 
@@ -97,8 +97,8 @@ The product shape has five major parts:
 - `skills/create-file-outline/SKILL.md` is a bundled agent-facing usage surface.
 - `tests/` owns parser, renderer, language detection, source mapping, and CLI
   behavior coverage.
-- `build.rs` owns release-time skill installation and should stay independent of
-  runtime parsing behavior.
+- `build.rs` only tracks skill changes for rebuilds and must stay free of
+  install-time filesystem side effects.
 
 ## Components
 
@@ -163,12 +163,13 @@ The CLI does not own parser semantics or output schemas. CLI tests verify defaul
 headers, JSON validity, continued processing after errors, list-supported output,
 budgeting, stdin, forced language parsing, and lenient parse mode.
 
-### Skill Installer
+### Skill Setup
 
-`build.rs` installs `skills/create-file-outline/SKILL.md` into the local Codex
-skills directory during release builds. This is a developer-machine integration,
-not a runtime dependency of the parser. `WOT_SKIP_SKILL_INSTALL=1` disables it for
-environments that need pure builds.
+`wot setup` installs `skills/create-file-outline/SKILL.md` into agent skill roots.
+By default it writes to the current project's `.agents/skills` tree. `-g` switches
+the base to the user's home directory, and `--claude` mirrors the install into
+the matching `.claude/skills` tree. This is an explicit developer action, not a
+side effect of `cargo install`.
 
 ## Data And Control Flow
 
@@ -205,6 +206,9 @@ later successful files before the process exits nonzero.
   backend names. It is the authoritative installed-format inventory.
 - `--language` and `--stdin` let callers bypass path detection for extensionless
   files and piped content.
+- `wot setup` installs the bundled skill into project-local `.agents`; `-g`
+  installs globally under `~/.agents`; `--claude` also installs into `.claude` or
+  `~/.claude`.
 - The JSON response schema has top-level `files` and `errors` arrays. Outline
   entries include `nodes`, `truncated`, and `omitted_nodes`; verbatim entries
   include `content`.
@@ -242,9 +246,9 @@ rtk cargo clippy --all-targets --all-features
 ## Change Management
 
 Update this document when a change moves responsibilities between CLI, parser,
-model, renderer, or build-script boundaries; changes JSON schema or Markdown
-formatting; adds or removes supported language families; changes range semantics;
-or changes release-time skill installation behavior.
+model, renderer, setup, or build-script boundaries; changes JSON schema or
+Markdown formatting; adds or removes supported language families; changes range
+semantics; or changes skill installation behavior.
 
 ## Architecture Discussion
 
@@ -257,9 +261,9 @@ coordinates IO and process policy.
 
 Dependency direction is straightforward: parser and renderer modules depend on
 the shared model, while the CLI depends on both as an adapter. Parser backends do
-not depend on CLI behavior. Side effects are concentrated in three places:
-runtime input/output in `src/cli.rs`, local release skill installation in
-`build.rs`, and filesystem reads for explicit user inputs.
+not depend on CLI behavior. Side effects are concentrated in `src/cli.rs`: runtime
+input/output, explicit `wot setup` skill installation, and filesystem reads for
+explicit user inputs.
 
 The remaining architectural delta is mostly about scale. `src/model.rs` currently
 owns both the core outline model and the complete language registry. That is

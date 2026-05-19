@@ -9,14 +9,22 @@ Use `wot` to produce compact Markdown outlines of supported files for agent cont
 
 ## Install
 
-Install or refresh the tool and this skill from the local checkout:
+Install or refresh the tool from the local checkout:
 
 ```bash
 cd /Users/dimitrivorona/projects/rust/wot
 cargo install --path . --root /Users/dimitrivorona/.local --force
 ```
 
-During release builds, Cargo copies this skill to `/Users/dimitrivorona/.agents/skills/create-file-outline/SKILL.md`. Set `WOT_SKIP_SKILL_INSTALL=1` to skip that side effect.
+Install or refresh this skill in the current project:
+
+```bash
+wot setup
+```
+
+Use `wot setup -g` for `/Users/dimitrivorona/.agents/skills/create-file-outline/SKILL.md`.
+Add `--claude` to also install into `.claude/skills/create-file-outline/SKILL.md`
+or `/Users/dimitrivorona/.claude/skills/create-file-outline/SKILL.md`.
 
 ## Usage
 
@@ -63,4 +71,5 @@ wot README.md src/lib.rs src/main.py package.json config.yaml Cargo.toml Dockerf
 wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0
+wot setup --claude
 ```

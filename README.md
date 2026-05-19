@@ -4,13 +4,22 @@ Agent-friendly outlines for source, config, and document files.
 
 ## Quickstart
 
-Install the CLI and bundled Codex skill from this checkout:
+Install the CLI from this checkout:
 
 ```bash
 cargo install --path . --root ~/.local --force
 ```
 
-This installs `wot` into `~/.local/bin` and copies the `create-file-outline` skill into `~/.agents/skills`.
+This installs `wot` into `~/.local/bin`.
+
+Install or refresh the bundled agent skill in the current project:
+
+```bash
+wot setup
+```
+
+Use `wot setup -g` for `~/.agents`, and add `--claude` to also install into
+`.claude` or `~/.claude`.
 
 ## Usage
 
@@ -30,6 +39,7 @@ wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0
 wot --list-supported
+wot setup --claude
 ```
 
 By default, `wot` prints recognized files of 40 lines or fewer verbatim. Larger files print compact Markdown outline items such as `- def run [L10-L18]`; pass `--min-lines 0` to force outlines for every file. Same-line JSON sections may include columns such as `L1:C2-L1:C7`.
