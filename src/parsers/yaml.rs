@@ -6,10 +6,21 @@ use crate::model::{Language, NodeKind, Outline};
 use crate::parsers::structured::{into_outline_nodes, scalar_summary, StructuredNode};
 
 pub fn parse(path: &Path, source: &str, max_depth: usize) -> Result<Outline> {
-    serde_yaml::from_str::<serde_yaml::Value>(source).map_err(|error| Error::Parse {
-        path: path.to_path_buf(),
-        message: error.to_string(),
-    })?;
+    parse_with_options(path, source, max_depth, false)
+}
+
+pub fn parse_with_options(
+    path: &Path,
+    source: &str,
+    max_depth: usize,
+    lenient: bool,
+) -> Result<Outline> {
+    if !lenient {
+        serde_yaml::from_str::<serde_yaml::Value>(source).map_err(|error| Error::Parse {
+            path: path.to_path_buf(),
+            message: error.to_string(),
+        })?;
+    }
 
     let entries = collect_entries(source);
     let mut index = 0;

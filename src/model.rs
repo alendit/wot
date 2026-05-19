@@ -1,7 +1,9 @@
+use serde::Serialize;
 use std::fmt;
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Language {
     Markdown,
     Python,
@@ -26,6 +28,15 @@ pub enum Language {
     Shell,
     Clojure,
     Elisp,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LanguageSpec {
+    pub language: Language,
+    pub names: &'static [&'static str],
+    pub extensions: &'static [&'static str],
+    pub filenames: &'static [&'static str],
+    pub backend: &'static str,
 }
 
 impl Language {
@@ -65,6 +76,180 @@ impl Language {
             Some("ipynb") => Some(Self::Notebook),
             _ => None,
         }
+    }
+
+    pub fn from_name(name: &str) -> Option<Self> {
+        let normalized = name.trim().to_ascii_lowercase();
+        Self::supported_specs()
+            .iter()
+            .find(|spec| spec.names.iter().any(|alias| *alias == normalized))
+            .map(|spec| spec.language)
+    }
+
+    pub fn supported_specs() -> &'static [LanguageSpec] {
+        &[
+            LanguageSpec {
+                language: Self::Rust,
+                names: &["rust", "rs"],
+                extensions: &[".rs"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::TypeScript,
+                names: &["typescript", "ts", "tsx"],
+                extensions: &[".ts", ".tsx", ".mts", ".cts"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::JavaScript,
+                names: &["javascript", "js", "jsx"],
+                extensions: &[".js", ".jsx", ".mjs", ".cjs"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Go,
+                names: &["go"],
+                extensions: &[".go"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::C,
+                names: &["c"],
+                extensions: &[".c", ".h"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Cpp,
+                names: &["cpp", "c++"],
+                extensions: &[".cc", ".cpp", ".cxx", ".hpp", ".hh", ".hxx"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Java,
+                names: &["java"],
+                extensions: &[".java"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Kotlin,
+                names: &["kotlin", "kt"],
+                extensions: &[".kt", ".kts"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::CSharp,
+                names: &["csharp", "c#"],
+                extensions: &[".cs"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Shell,
+                names: &["shell", "sh", "bash", "zsh"],
+                extensions: &[".sh", ".bash", ".zsh"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Clojure,
+                names: &["clojure", "clj", "cljs", "cljc", "bb"],
+                extensions: &[".clj", ".cljs", ".cljc", ".bb"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Elisp,
+                names: &["elisp", "emacs-lisp"],
+                extensions: &[".el"],
+                filenames: &[],
+                backend: "tree-sitter",
+            },
+            LanguageSpec {
+                language: Self::Markdown,
+                names: &["markdown", "md"],
+                extensions: &[".md", ".markdown"],
+                filenames: &[],
+                backend: "pulldown-cmark",
+            },
+            LanguageSpec {
+                language: Self::Python,
+                names: &["python", "py"],
+                extensions: &[".py"],
+                filenames: &[],
+                backend: "ruff-python-parser",
+            },
+            LanguageSpec {
+                language: Self::Json,
+                names: &["json"],
+                extensions: &[".json"],
+                filenames: &[],
+                backend: "serde_json + scanner",
+            },
+            LanguageSpec {
+                language: Self::Yaml,
+                names: &["yaml", "yml"],
+                extensions: &[".yaml", ".yml"],
+                filenames: &[],
+                backend: "serde_yaml + scanner",
+            },
+            LanguageSpec {
+                language: Self::Toml,
+                names: &["toml"],
+                extensions: &[".toml"],
+                filenames: &[],
+                backend: "toml + scanner",
+            },
+            LanguageSpec {
+                language: Self::Ini,
+                names: &["ini"],
+                extensions: &[".ini"],
+                filenames: &[],
+                backend: "scanner",
+            },
+            LanguageSpec {
+                language: Self::Dotenv,
+                names: &["dotenv", "env"],
+                extensions: &[],
+                filenames: &[".env", ".env.*"],
+                backend: "scanner",
+            },
+            LanguageSpec {
+                language: Self::Xml,
+                names: &["xml", "svg", "plist"],
+                extensions: &[".xml", ".svg", ".plist"],
+                filenames: &[],
+                backend: "scanner",
+            },
+            LanguageSpec {
+                language: Self::Hcl,
+                names: &["hcl", "terraform", "tf", "tfvars"],
+                extensions: &[".hcl", ".tf", ".tfvars"],
+                filenames: &[],
+                backend: "scanner",
+            },
+            LanguageSpec {
+                language: Self::Dockerfile,
+                names: &["dockerfile", "containerfile"],
+                extensions: &[".dockerfile"],
+                filenames: &["Dockerfile", "Containerfile"],
+                backend: "scanner",
+            },
+            LanguageSpec {
+                language: Self::Notebook,
+                names: &["notebook", "ipynb", "jupyter"],
+                extensions: &[".ipynb"],
+                filenames: &[],
+                backend: "serde_json + embedded parsers",
+            },
+        ]
     }
 }
 
@@ -113,7 +298,8 @@ pub struct OutlineNode {
     pub children: Vec<OutlineNode>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum NodeKind {
     Heading,
     Class,
@@ -191,7 +377,7 @@ impl SourceRange {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Position {
     pub line: usize,
     pub column: usize,

@@ -15,16 +15,30 @@ This installs `wot` into `~/.local/bin` and copies the `create-file-outlne` skil
 ## Usage
 
 ```bash
-wot [--max-depth N] <file>...
+wot [OPTIONS] <file>...
 ```
 
 Examples:
 
 ```bash
 wot README.md src/lib.rs src/main.py data.json config.yaml Cargo.toml Dockerfile
-wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
+wot --min-lines 0 --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
+wot --format json --min-lines 0 src/lib.rs
+wot --stdin --language python --min-lines 0
+wot --list-supported
 ```
 
-`wot` prints a compact Markdown TOC. Each file starts with `# path/to/file`, and entries include line ranges such as `- def run [L10-L18]`. For same-line JSON sections, ranges may include columns such as `L1:C2-L1:C7`.
+By default, `wot` prints recognized files of 80 lines or fewer verbatim. Larger files print compact Markdown outline items such as `- def run [L10-L18]`; pass `--min-lines 0` to force outlines for every file. Same-line JSON sections may include columns such as `L1:C2-L1:C7`.
+
+Useful options:
+
+- `--format markdown|json` chooses text or machine-readable output.
+- `--header` prints file headers in Markdown output.
+- `--max-items N` caps outline nodes; default is `200`.
+- `--min-lines N` prints recognized files at or below `N` lines verbatim; default is `80`.
+- `--language LANG` forces parsing as a supported language.
+- `--stdin` reads stdin and requires `--language`.
+- `--lenient` enables safe partial parsing for YAML, TOML, HCL, and XML.
+- `--list-supported` prints languages, recognized names/extensions, and parser backend.
 
 Supported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks. CSV/TSV and NDJSON/JSONL are intentionally not supported yet.

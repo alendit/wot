@@ -7,10 +7,21 @@ use crate::parsers::structured::{
 };
 
 pub fn parse(path: &Path, source: &str, max_depth: usize) -> Result<Outline> {
-    toml::from_str::<toml::Value>(source).map_err(|error| Error::Parse {
-        path: path.to_path_buf(),
-        message: error.to_string(),
-    })?;
+    parse_with_options(path, source, max_depth, false)
+}
+
+pub fn parse_with_options(
+    path: &Path,
+    source: &str,
+    max_depth: usize,
+    lenient: bool,
+) -> Result<Outline> {
+    if !lenient {
+        toml::from_str::<toml::Value>(source).map_err(|error| Error::Parse {
+            path: path.to_path_buf(),
+            message: error.to_string(),
+        })?;
+    }
 
     Ok(Outline {
         path: path.to_path_buf(),

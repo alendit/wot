@@ -5,8 +5,17 @@ use crate::model::{Language, NodeKind, Outline, OutlineNode};
 use crate::source_map::SourceMap;
 
 pub fn parse(path: &Path, source: &str, max_depth: usize) -> Result<Outline> {
+    parse_with_options(path, source, max_depth, false)
+}
+
+pub fn parse_with_options(
+    path: &Path,
+    source: &str,
+    max_depth: usize,
+    lenient: bool,
+) -> Result<Outline> {
     let scanner = XmlScanner::new(source);
-    let nodes = scanner.parse().map_err(|message| Error::Parse {
+    let nodes = scanner.parse(lenient).map_err(|message| Error::Parse {
         path: path.to_path_buf(),
         message,
     })?;
@@ -39,7 +48,7 @@ impl<'a> XmlScanner<'a> {
         }
     }
 
-    fn parse(self) -> std::result::Result<Vec<OutlineNode>, String> {
+    fn parse(self, lenient: bool) -> std::result::Result<Vec<OutlineNode>, String> {
         let mut roots = Vec::new();
         let mut stack = Vec::<OpenElement>::new();
         let mut position = 0;
@@ -104,7 +113,19 @@ impl<'a> XmlScanner<'a> {
             }
         }
 
-        if let Some(element) = stack.last() {
+        if lenient {
+            while let Some(element) = stack.pop() {
+                let end = self.source.len();
+                let node = OutlineNode {
+                    label: element.label,
+                    kind: NodeKind::XmlElement,
+                    range: self.map.range(element.start..end),
+                    children: element.children,
+                };
+                attach_node(&mut roots, &mut stack, node);
+            }
+            Ok(roots)
+        } else if let Some(element) = stack.last() {
             Err(format!("unclosed XML tag `{}`", element.name))
         } else {
             Ok(roots)

@@ -7,7 +7,16 @@ use crate::parsers::structured::{
 };
 
 pub fn parse(path: &Path, source: &str, max_depth: usize) -> Result<Outline> {
-    let nodes = collect_nodes(source).map_err(|message| Error::Parse {
+    parse_with_options(path, source, max_depth, false)
+}
+
+pub fn parse_with_options(
+    path: &Path,
+    source: &str,
+    max_depth: usize,
+    lenient: bool,
+) -> Result<Outline> {
+    let nodes = collect_nodes(source, lenient).map_err(|message| Error::Parse {
         path: path.to_path_buf(),
         message,
     })?;
@@ -19,12 +28,14 @@ pub fn parse(path: &Path, source: &str, max_depth: usize) -> Result<Outline> {
     })
 }
 
-fn collect_nodes(source: &str) -> std::result::Result<Vec<StructuredNode>, String> {
+fn collect_nodes(source: &str, lenient: bool) -> std::result::Result<Vec<StructuredNode>, String> {
     let mut roots = Vec::new();
     let mut stack = Vec::<StructuredNode>::new();
+    let mut last_line = 1;
 
     for (line_index, line) in source.lines().enumerate() {
         let line_number = line_index + 1;
+        last_line = line_number;
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') || trimmed.starts_with("//") {
             continue;
@@ -69,7 +80,13 @@ fn collect_nodes(source: &str) -> std::result::Result<Vec<StructuredNode>, Strin
         }
     }
 
-    if let Some(node) = stack.last() {
+    if lenient {
+        while let Some(mut node) = stack.pop() {
+            node.end_line = last_line;
+            attach_node(&mut roots, &mut stack, node);
+        }
+        Ok(roots)
+    } else if let Some(node) = stack.last() {
         Err(format!("unclosed HCL block `{}`", node.label))
     } else {
         Ok(roots)

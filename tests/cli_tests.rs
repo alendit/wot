@@ -11,7 +11,7 @@ fn exits_nonzero_without_input_files() {
     command
         .assert()
         .failure()
-        .stderr(predicate::str::contains("Usage:"));
+        .stderr(predicate::str::contains("no input files provided"));
 }
 
 #[test]
@@ -23,12 +23,12 @@ fn outlines_multiple_files_in_input_order() {
     fs::write(&python, "def run():\n    return 1\n").unwrap();
 
     let mut command = Command::cargo_bin("wot").unwrap();
-    command.args([markdown.as_os_str(), python.as_os_str()]);
+    command
+        .args(["--min-lines", "0"])
+        .args([markdown.as_os_str(), python.as_os_str()]);
 
     command.assert().success().stdout(
-        predicate::str::contains(format!("# {}", markdown.display()))
-            .and(predicate::str::contains("- Intro [L1-L2]"))
-            .and(predicate::str::contains(format!("# {}", python.display())))
+        predicate::str::contains("- Intro [L1-L2]")
             .and(predicate::str::contains("- def run [L1-L2]")),
     );
 }
@@ -44,17 +44,15 @@ fn outlines_structured_files_from_the_cli() {
     fs::write(&dockerfile, "FROM scratch\nCOPY app /app\n").unwrap();
 
     let mut command = Command::cargo_bin("wot").unwrap();
-    command.args([yaml.as_os_str(), toml.as_os_str(), dockerfile.as_os_str()]);
+    command.args(["--min-lines", "0"]).args([
+        yaml.as_os_str(),
+        toml.as_os_str(),
+        dockerfile.as_os_str(),
+    ]);
 
     command.assert().success().stdout(
-        predicate::str::contains(format!("# {}", yaml.display()))
-            .and(predicate::str::contains("- service: object [L1-L2]"))
-            .and(predicate::str::contains(format!("# {}", toml.display())))
+        predicate::str::contains("- service: object [L1-L2]")
             .and(predicate::str::contains("  - name: \"wot\" [L2]"))
-            .and(predicate::str::contains(format!(
-                "# {}",
-                dockerfile.display()
-            )))
             .and(predicate::str::contains("- FROM scratch [L1-L2]")),
     );
 }
@@ -68,13 +66,13 @@ fn outlines_tree_sitter_code_files_from_the_cli() {
     fs::write(&shell, "build() {\n  echo build\n}\n").unwrap();
 
     let mut command = Command::cargo_bin("wot").unwrap();
-    command.args([rust.as_os_str(), shell.as_os_str()]);
+    command
+        .args(["--min-lines", "0"])
+        .args([rust.as_os_str(), shell.as_os_str()]);
 
     command.assert().success().stdout(
-        predicate::str::contains(format!("# {}", rust.display()))
-            .and(predicate::str::contains("- struct App [L1]"))
+        predicate::str::contains("- struct App [L1]")
             .and(predicate::str::contains("- fn run [L3]"))
-            .and(predicate::str::contains(format!("# {}", shell.display())))
             .and(predicate::str::contains("- function build [L1-L3]")),
     );
 }
@@ -86,7 +84,9 @@ fn applies_max_depth_to_cli_output() {
     fs::write(&markdown, "# Root\n## Child\n### Hidden\n").unwrap();
 
     let mut command = Command::cargo_bin("wot").unwrap();
-    command.args(["--max-depth", "2"]).arg(&markdown);
+    command
+        .args(["--max-depth", "2", "--min-lines", "0"])
+        .arg(&markdown);
 
     command
         .assert()
@@ -119,7 +119,9 @@ fn processes_remaining_files_after_a_failure() {
     fs::write(&markdown, "# Kept\n").unwrap();
 
     let mut command = Command::cargo_bin("wot").unwrap();
-    command.args([missing.as_os_str(), markdown.as_os_str()]);
+    command
+        .args(["--min-lines", "0"])
+        .args([missing.as_os_str(), markdown.as_os_str()]);
 
     command
         .assert()
