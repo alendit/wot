@@ -34,6 +34,32 @@ fn outlines_multiple_files_in_input_order() {
 }
 
 #[test]
+fn outlines_structured_files_from_the_cli() {
+    let directory = tempdir().unwrap();
+    let yaml = directory.path().join("config.yaml");
+    let toml = directory.path().join("settings.toml");
+    let dockerfile = directory.path().join("Dockerfile");
+    fs::write(&yaml, "service:\n  image: nginx\n").unwrap();
+    fs::write(&toml, "[package]\nname = \"wot\"\n").unwrap();
+    fs::write(&dockerfile, "FROM scratch\nCOPY app /app\n").unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command.args([yaml.as_os_str(), toml.as_os_str(), dockerfile.as_os_str()]);
+
+    command.assert().success().stdout(
+        predicate::str::contains(format!("# {}", yaml.display()))
+            .and(predicate::str::contains("- service: object [L1-L2]"))
+            .and(predicate::str::contains(format!("# {}", toml.display())))
+            .and(predicate::str::contains("  - name: \"wot\" [L2]"))
+            .and(predicate::str::contains(format!(
+                "# {}",
+                dockerfile.display()
+            )))
+            .and(predicate::str::contains("- FROM scratch [L1-L2]")),
+    );
+}
+
+#[test]
 fn applies_max_depth_to_cli_output() {
     let directory = tempdir().unwrap();
     let markdown = directory.path().join("doc.md");

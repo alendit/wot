@@ -1,11 +1,11 @@
 ---
 name: create-file-outlne
-description: Use when the user asks for a compact file outline, table of contents, TOC, section map, line ranges, or agent-friendly overview of Markdown, Python, or JSON files using the wot CLI.
+description: Use when the user asks for a compact file outline, table of contents, TOC, section map, line ranges, or agent-friendly overview of source, config, or document files using the wot CLI.
 ---
 
 # Create File Outline
 
-Use `wot` to produce compact Markdown outlines of supported files for agent context. It supports Markdown, Python, and JSON.
+Use `wot` to produce compact Markdown outlines of supported files for agent context. It supports Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.
 
 ## Install
 
@@ -34,6 +34,7 @@ Defaults:
 - Each file starts with `# path/to/file`.
 - Items render as `- label [Lstart-Lend]`.
 - Same-line JSON siblings can use `Lx:Cy-Lx:Cz` ranges.
+- `.env` secret-like values are redacted in labels.
 
 ## Workflow
 
@@ -45,6 +46,6 @@ Defaults:
 ## Examples
 
 ```bash
-wot README.md src/main.py package.json
-wot --max-depth 2 docs/spec.md src/app.py
+wot README.md src/main.py package.json config.yaml Cargo.toml Dockerfile
+wot --max-depth 2 docs/spec.md src/app.py analysis.ipynb
 ```

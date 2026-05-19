@@ -1,6 +1,6 @@
 # wot
 
-Agent-friendly outlines for Markdown, Python, and JSON files.
+Agent-friendly outlines for source, config, and document files.
 
 ## Quickstart
 
@@ -21,8 +21,10 @@ wot [--max-depth N] <file>...
 Examples:
 
 ```bash
-wot README.md src/main.py data.json
-wot --max-depth 2 docs/spec.md src/app.py
+wot README.md src/main.py data.json config.yaml Cargo.toml Dockerfile
+wot --max-depth 2 docs/spec.md src/app.py analysis.ipynb
 ```
 
 `wot` prints a compact Markdown TOC. Each file starts with `# path/to/file`, and entries include line ranges such as `- def run [L10-L18]`. For same-line JSON sections, ranges may include columns such as `L1:C2-L1:C7`.
+
+Supported inputs include Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks. CSV/TSV and NDJSON/JSONL are intentionally not supported yet.

@@ -6,14 +6,39 @@ pub enum Language {
     Markdown,
     Python,
     Json,
+    Yaml,
+    Toml,
+    Ini,
+    Dotenv,
+    Xml,
+    Hcl,
+    Dockerfile,
+    Notebook,
 }
 
 impl Language {
     pub fn from_path(path: &std::path::Path) -> Option<Self> {
+        let file_name = path.file_name().and_then(|name| name.to_str())?;
+        if file_name == "Dockerfile"
+            || file_name == "Containerfile"
+            || file_name.ends_with(".dockerfile")
+        {
+            return Some(Self::Dockerfile);
+        }
+        if file_name == ".env" || file_name.starts_with(".env.") {
+            return Some(Self::Dotenv);
+        }
+
         match path.extension().and_then(|extension| extension.to_str()) {
             Some("md" | "markdown") => Some(Self::Markdown),
             Some("py") => Some(Self::Python),
             Some("json") => Some(Self::Json),
+            Some("yaml" | "yml") => Some(Self::Yaml),
+            Some("toml") => Some(Self::Toml),
+            Some("ini") => Some(Self::Ini),
+            Some("xml" | "svg" | "plist") => Some(Self::Xml),
+            Some("hcl" | "tf" | "tfvars") => Some(Self::Hcl),
+            Some("ipynb") => Some(Self::Notebook),
             _ => None,
         }
     }
@@ -25,6 +50,14 @@ impl fmt::Display for Language {
             Self::Markdown => write!(formatter, "markdown"),
             Self::Python => write!(formatter, "python"),
             Self::Json => write!(formatter, "json"),
+            Self::Yaml => write!(formatter, "yaml"),
+            Self::Toml => write!(formatter, "toml"),
+            Self::Ini => write!(formatter, "ini"),
+            Self::Dotenv => write!(formatter, "dotenv"),
+            Self::Xml => write!(formatter, "xml"),
+            Self::Hcl => write!(formatter, "hcl"),
+            Self::Dockerfile => write!(formatter, "dockerfile"),
+            Self::Notebook => write!(formatter, "notebook"),
         }
     }
 }
@@ -51,6 +84,14 @@ pub enum NodeKind {
     Function,
     JsonProperty,
     JsonArrayElement,
+    ConfigKey,
+    ConfigSection,
+    ConfigArrayElement,
+    XmlElement,
+    HclBlock,
+    DockerStage,
+    DockerInstruction,
+    NotebookCell,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
