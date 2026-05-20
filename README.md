@@ -21,6 +21,19 @@ wot setup
 Use `wot setup -g` for `~/.agents`, and add `--claude` to also install into
 `.claude` or `~/.claude`.
 
+Add `--hooks` to install non-blocking PreToolUse reminders that nudge agents to
+use `wot` before broad file reads when they are still deciding which sections
+matter:
+
+```bash
+wot setup --hooks
+wot setup --claude --hooks
+```
+
+For Codex, `--hooks` writes `.codex/hooks.json` or `~/.codex/hooks.json`. With
+`--claude`, it also writes `.claude/settings.json` or
+`~/.claude/settings.json`.
+
 ## Usage
 
 ```bash
@@ -40,6 +53,7 @@ wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0
 wot --list-supported
 wot setup --claude
+wot setup --claude --hooks
 ```
 
 Example output:
@@ -63,5 +77,18 @@ Useful options:
 - `--stdin` reads stdin and requires `--language`.
 - `--lenient` enables safe partial parsing for YAML, TOML, HCL, and XML.
 - `--list-supported` prints languages, recognized names/extensions, and parser backend.
+
+Setup options:
+
+- `wot setup` installs or refreshes the bundled `create-file-outline` skill in `.agents`.
+- `wot setup --claude` also installs the skill in `.claude`.
+- `wot setup -g` uses user-level roots under `~/.agents`, `~/.codex`, and `~/.claude`.
+- `wot setup --hooks` installs advisory PreToolUse hooks for the selected setup targets.
+
+The hook runs `wot hook-check` before supported tool use. It never blocks,
+asks for approval, rewrites tool input, or replaces normal skill guidance. When
+the pending tool call looks like broad file exploration, it injects a short
+model-visible reminder to use `rg --files` for candidates and `wot` for
+outlines before broad reads.
 
 Supported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks. CSV/TSV and NDJSON/JSONL are intentionally not supported yet.

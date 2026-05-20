@@ -275,3 +275,164 @@ fn setup_global_and_claude_install_to_home_roots() {
         .unwrap()
         .contains("name: create-file-outline"));
 }
+
+#[test]
+fn setup_global_hooks_install_to_home_hook_roots() {
+    let directory = tempdir().unwrap();
+    let home = tempdir().unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command
+        .args(["setup", "-g", "--claude", "--hooks"])
+        .current_dir(directory.path())
+        .env("HOME", home.path());
+    command.assert().success();
+
+    let codex_hooks = home.path().join(".codex/hooks.json");
+    let claude_settings = home.path().join(".claude/settings.json");
+    assert!(fs::read_to_string(codex_hooks)
+        .unwrap()
+        .contains("wot hook-check"));
+    assert!(fs::read_to_string(claude_settings)
+        .unwrap()
+        .contains("wot hook-check"));
+}
+
+#[test]
+fn setup_hooks_installs_codex_hook_and_agent_skill() {
+    let directory = tempdir().unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command
+        .args(["setup", "--hooks"])
+        .current_dir(directory.path());
+    command
+        .assert()
+        .success()
+        .stdout(predicate::str::contains(".agents"))
+        .stdout(predicate::str::contains(".codex/hooks.json"));
+
+    let skill = directory
+        .path()
+        .join(".agents/skills/create-file-outline/SKILL.md");
+    assert!(fs::read_to_string(skill)
+        .unwrap()
+        .contains("name: create-file-outline"));
+
+    let hooks_path = directory.path().join(".codex/hooks.json");
+    let hooks: Value = serde_json::from_str(&fs::read_to_string(hooks_path).unwrap()).unwrap();
+    let pre_tool = hooks["hooks"]["PreToolUse"].as_array().unwrap();
+    assert_eq!(pre_tool.len(), 1);
+    assert_eq!(pre_tool[0]["matcher"], "Bash");
+    assert_eq!(pre_tool[0]["hooks"][0]["command"], "wot hook-check");
+}
+
+#[test]
+fn setup_claude_hooks_installs_claude_settings_and_is_idempotent() {
+    let directory = tempdir().unwrap();
+    let settings_path = directory.path().join(".claude/settings.json");
+    fs::create_dir_all(settings_path.parent().unwrap()).unwrap();
+    fs::write(
+        &settings_path,
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo unrelated"}]}]},"permissions":{"allow":["Bash(cargo test)"]}}"#,
+    )
+    .unwrap();
+
+    for _ in 0..2 {
+        let mut command = Command::cargo_bin("wot").unwrap();
+        command
+            .args(["setup", "--claude", "--hooks"])
+            .current_dir(directory.path());
+        command.assert().success();
+    }
+
+    let settings: Value =
+        serde_json::from_str(&fs::read_to_string(settings_path).unwrap()).unwrap();
+    assert_eq!(settings["permissions"]["allow"][0], "Bash(cargo test)");
+
+    let pre_tool = settings["hooks"]["PreToolUse"].as_array().unwrap();
+    assert_eq!(pre_tool.len(), 2);
+    assert_eq!(pre_tool[0]["hooks"][0]["command"], "echo unrelated");
+    assert_eq!(pre_tool[1]["matcher"], "Bash|Read|Glob|Grep");
+    assert_eq!(pre_tool[1]["hooks"][0]["command"], "wot hook-check");
+}
+
+#[test]
+fn setup_hooks_preserves_unrelated_codex_hooks_and_replaces_prior_wot_hook() {
+    let directory = tempdir().unwrap();
+    let hooks_path = directory.path().join(".codex/hooks.json");
+    fs::create_dir_all(hooks_path.parent().unwrap()).unwrap();
+    fs::write(
+        &hooks_path,
+        r#"{"hooks":{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"echo unrelated"}]},{"matcher":"Bash","hooks":[{"type":"command","command":"/old/bin/wot hook-check"}]}]}}"#,
+    )
+    .unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command
+        .args(["setup", "--hooks"])
+        .current_dir(directory.path());
+    command.assert().success();
+
+    let hooks: Value = serde_json::from_str(&fs::read_to_string(hooks_path).unwrap()).unwrap();
+    let pre_tool = hooks["hooks"]["PreToolUse"].as_array().unwrap();
+    assert_eq!(pre_tool.len(), 2);
+    assert_eq!(pre_tool[0]["hooks"][0]["command"], "echo unrelated");
+    assert_eq!(pre_tool[1]["hooks"][0]["command"], "wot hook-check");
+}
+
+#[test]
+fn setup_hooks_rejects_invalid_existing_json() {
+    let directory = tempdir().unwrap();
+    let hooks_path = directory.path().join(".codex/hooks.json");
+    fs::create_dir_all(hooks_path.parent().unwrap()).unwrap();
+    fs::write(&hooks_path, "{not json").unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command
+        .args(["setup", "--hooks"])
+        .current_dir(directory.path());
+    command
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("invalid JSON"));
+}
+
+#[test]
+fn hook_check_emits_advisory_context_for_broad_reads() {
+    let mut command = Command::cargo_bin("wot").unwrap();
+    let output = command
+        .arg("hook-check")
+        .write_stdin(r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat src/cli.rs"}}"#)
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: Value = serde_json::from_slice(&output).unwrap();
+
+    assert_eq!(json["hookSpecificOutput"]["hookEventName"], "PreToolUse");
+    assert!(json["hookSpecificOutput"]["additionalContext"]
+        .as_str()
+        .unwrap()
+        .contains("selection uncertainty"));
+}
+
+#[test]
+fn hook_check_exits_silently_for_exact_or_unrelated_inputs() {
+    for input in [
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"rg \"hook-check\" src/cli.rs"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"rg --files"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"wot README.md"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"src/cli.rs","offset":10,"limit":20}}"#,
+        r#"{not json"#,
+    ] {
+        let mut command = Command::cargo_bin("wot").unwrap();
+        command
+            .arg("hook-check")
+            .write_stdin(input)
+            .assert()
+            .success()
+            .stdout("");
+    }
+}

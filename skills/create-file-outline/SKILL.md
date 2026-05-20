@@ -26,6 +26,18 @@ Use `wot setup -g` for `/Users/dimitrivorona/.agents/skills/create-file-outline/
 Add `--claude` to also install into `.claude/skills/create-file-outline/SKILL.md`
 or `/Users/dimitrivorona/.claude/skills/create-file-outline/SKILL.md`.
 
+Add `--hooks` to also install non-blocking PreToolUse reminders for the selected
+setup targets:
+
+```bash
+wot setup --hooks
+wot setup --claude --hooks
+```
+
+For Codex, `--hooks` writes `.codex/hooks.json` or
+`/Users/dimitrivorona/.codex/hooks.json`. With `--claude`, it also writes
+`.claude/settings.json` or `/Users/dimitrivorona/.claude/settings.json`.
+
 ## Usage
 
 Run:
@@ -52,6 +64,17 @@ Defaults:
 - `.env` secret-like values are redacted in labels.
 - `--list-supported` prints recognized languages/extensions and parser backend.
 - `--lenient` enables safe partial parsing for YAML, TOML, HCL, and XML.
+
+Setup hooks:
+
+- `wot setup --hooks` installs advisory PreToolUse hooks for Codex.
+- `wot setup --claude --hooks` also installs advisory PreToolUse hooks for Claude.
+- The hooks run `wot hook-check`.
+- The hooks never block tool use, ask for approval, rewrite tool input, or
+  replace these skill instructions.
+- When a pending tool call looks like broad file exploration, the hook nudges
+  the agent to use `rg --files` for candidates and `wot` for outlines before
+  broad reads.
 
 ## When To Use
 
@@ -108,4 +131,5 @@ wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0
 wot setup --claude
+wot setup --claude --hooks
 ```
