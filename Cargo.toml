@@ -1,12 +1,12 @@
 [package]
-name = "wot"
+name = "wot-cli"
 version = "0.1.2"
 edition = "2021"
 description = "Create compact outlines from source and data files for agents"
 license = "MIT"
 repository = "https://github.com/alendit/wot"
 homepage = "https://github.com/alendit/wot"
-documentation = "https://docs.rs/wot"
+documentation = "https://docs.rs/wot-cli"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -37,6 +37,10 @@ tree-sitter-typescript = "0.23"
 assert_cmd = "2.0"
 predicates = "3.1"
 tempfile = "3.14"
+
+[lib]
+name = "wot"
+path = "src/lib.rs"
 
 [[bin]]
 name = "wot"

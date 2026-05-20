@@ -4,13 +4,19 @@ Agent-friendly outlines for source, config, and document files.
 
 ## Quickstart
 
-Install the CLI from the GitHub repository:
+Install the CLI from crates.io:
+
+```bash
+cargo install wot-cli --root ~/.local --force
+```
+
+This installs `wot` into `~/.local/bin`.
+
+Or install directly from the GitHub repository:
 
 ```bash
 cargo install --git https://github.com/alendit/wot --root ~/.local --force
 ```
-
-This installs `wot` into `~/.local/bin`.
 
 Install or refresh the bundled agent skill in the current project:
 
