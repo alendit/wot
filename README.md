@@ -1,5 +1,8 @@
 # wot
 
+[![Crates.io](https://img.shields.io/crates/v/wot-cli.svg)](https://crates.io/crates/wot-cli)
+[![CI](https://github.com/alendit/wot/actions/workflows/ci.yml/badge.svg)](https://github.com/alendit/wot/actions/workflows/ci.yml)
+
 Agent-friendly outlines for source, config, and document files.
 
 ## Quickstart
@@ -96,5 +99,20 @@ asks for approval, rewrites tool input, or replaces normal skill guidance. When
 the pending tool call looks like broad file exploration, it injects a short
 model-visible reminder to use `rg --files` for candidates and `wot` for
 outlines before broad reads.
+
+## Release
+
+Releases are published from GitHub Actions when a semver-like tag is pushed:
+
+```bash
+git tag 0.1.3
+git push origin main 0.1.3
+```
+
+The publish workflow uses crates.io Trusted Publishing through GitHub Actions
+OIDC. Configure crates.io to trust this repository and
+`.github/workflows/publish.yml` before relying on automated releases.
+
+## Supported Inputs
 
 Supported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks. CSV/TSV and NDJSON/JSONL are intentionally not supported yet.
