@@ -42,6 +42,15 @@ wot --list-supported
 wot setup --claude
 ```
 
+Example output:
+
+```console
+$ wot --min-lines 0 README.md
+- wot [L1-L67]
+  - Quickstart [L5-L23]
+  - Usage [L24-L67]
+```
+
 By default, `wot` prints recognized files of 40 lines or fewer verbatim. Larger files print compact Markdown outline items such as `- def run [L10-L18]`; pass `--min-lines 0` to force outlines for every file. Same-line JSON sections may include columns such as `L1:C2-L1:C7`.
 
 Useful options:
