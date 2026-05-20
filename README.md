@@ -4,10 +4,10 @@ Agent-friendly outlines for source, config, and document files.
 
 ## Quickstart
 
-Install the CLI from this checkout:
+Install the CLI from the GitHub repository:
 
 ```bash
-cargo install --path . --root ~/.local --force
+cargo install --git https://github.com/alendit/wot --root ~/.local --force
 ```
 
 This installs `wot` into `~/.local/bin`.
