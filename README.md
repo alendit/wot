@@ -93,6 +93,8 @@ Setup options:
 - `wot setup --claude` also installs the skill in `.claude`.
 - `wot setup -g` uses user-level roots under `~/.agents`, `~/.codex`, and `~/.claude`.
 - `wot setup --hooks` installs advisory PreToolUse hooks for the selected setup targets.
+- `wot setup -g --hooks` installs the same hooks in user-level Codex and agent roots.
+- `wot setup --claude --hooks` installs both the agent skill and hook reminders for Claude.
 
 The hook runs `wot hook-check` before supported tool use. It never blocks,
 asks for approval, rewrites tool input, or replaces normal skill guidance. When
