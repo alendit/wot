@@ -105,8 +105,8 @@ outlines before broad reads.
 Releases are published from GitHub Actions when a semver-like tag is pushed:
 
 ```bash
-git tag 0.1.3
-git push origin main 0.1.3
+git tag 0.2.0
+git push origin main 0.2.0
 ```
 
 The publish workflow uses crates.io Trusted Publishing through GitHub Actions
