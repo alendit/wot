@@ -1,6 +1,6 @@
 ---
 name: create-file-outline
-description: Use before broad file reads when the user asks to inspect, summarize, navigate, or understand source, config, docs, notebooks, or multiple files; use for compact file outlines, table of contents, TOCs, section maps, line ranges, and agent-friendly overviews with the wot CLI.
+description: Use when you need to decide which parts of source, config, docs, notebooks, or candidate files are worth reading before reading them in detail; use for compact outlines, TOCs, section maps, line ranges, overviews, comparisons, navigation maps, and architecture understanding with the wot CLI.
 ---
 
 # Create File Outline
@@ -53,16 +53,52 @@ Defaults:
 - `--list-supported` prints recognized languages/extensions and parser backend.
 - `--lenient` enables safe partial parsing for YAML, TOML, HCL, and XML.
 
+## When To Use
+
+Use `wot` when you need to decide what parts of one or more files are worth
+reading before reading them in detail.
+
+Strong signals:
+
+- You are orienting in an unfamiliar file or repo.
+- You are comparing projects or architectures.
+- You have file candidates but do not yet know which sections matter.
+- You are about to skim with broad `sed`, `cat`, or editor reads just to find
+  structure.
+- You need section, function, class, key, or cell names with line ranges before
+  choosing exact reads.
+- The user asks for an overview, summary, comparison, navigation map, or
+  architecture understanding.
+
+Skip `wot` when:
+
+- You already know the exact small section to read.
+- You are searching for a specific string or symbol; use `rg` first.
+- The file is short enough that reading it verbatim is the outline.
+- The task depends on exact full content rather than structure.
+
 ## Workflow
 
-1. Before opening many supported files or a large supported file with `cat`, `sed`, or an editor, run `wot` first to get the structure and line ranges.
-2. Prefer plain `wot <file>` for small-file verbatim context and ranged outlines for larger files.
-3. Use `wot --min-lines 0` when line-numbered outlines are required even for small files.
-4. Use `wot --max-depth 2` for quick overviews and `--max-depth 3` or higher when the user needs more structure.
-5. Read exact source ranges with normal file tools after `wot` identifies the relevant sections.
-6. Pass multiple files in the order the user should read them.
-7. If a file fails, read stderr; `wot` continues processing later files and exits nonzero when any file fails.
-8. For unsupported file types, use `--language LANG` when the intended language is known.
+1. Use `wot` to reduce selection uncertainty and get structure with line ranges.
+2. Read exact source ranges with normal file tools after `wot` identifies the
+   relevant sections.
+3. Use `wot --min-lines 0` when line-numbered outlines are required even for
+   small files.
+4. Use `wot --max-depth 2` for quick overviews and `--max-depth 3` or higher
+   when the user needs more structure.
+5. Pass multiple files in the order the user should read them.
+6. If a file fails, read stderr; `wot` continues processing later files and exits
+   nonzero when any file fails.
+7. For unsupported file types, use `--language LANG` when the intended language
+   is known.
+
+## Upstream Or Comparison Workflow
+
+For cloned upstream projects or project comparisons:
+
+1. Use `rg --files` to find candidate entry points.
+2. Use `wot` on the candidate docs/source files to get structure and line ranges.
+3. Read only the relevant ranges with normal file tools.
 
 ## Examples
 
