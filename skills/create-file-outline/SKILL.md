@@ -5,7 +5,7 @@ description: Use when you need to decide which parts of source, config, docs, no
 
 # Create File Outline
 
-Use `wot` to produce compact Markdown outlines of supported files for agent context. It supports Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.
+Use `wot` to produce compact Markdown outlines of supported files for agent context. It supports Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Org mode, Python, JSON, YAML, TOML, INI, `.env`, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.
 
 ## Install
 
@@ -126,7 +126,7 @@ For cloned upstream projects or project comparisons:
 ## Examples
 
 ```bash
-wot README.md src/lib.rs src/main.py package.json config.yaml Cargo.toml Dockerfile
+wot README.md notes.org src/lib.rs src/main.py package.json config.yaml Cargo.toml Dockerfile
 wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
 wot --stdin --language python --min-lines 0

@@ -66,6 +66,10 @@ fn detects_structured_file_extensions_and_special_names() {
         Some(Language::Elisp)
     );
     assert_eq!(
+        Language::from_path(Path::new("notes.org")),
+        Some(Language::Org)
+    );
+    assert_eq!(
         Language::from_path(Path::new("config.yaml")),
         Some(Language::Yaml)
     );
@@ -125,4 +129,10 @@ fn keeps_deferred_tabular_and_streaming_data_unsupported() {
     assert_eq!(Language::from_path(Path::new("data.tsv")), None);
     assert_eq!(Language::from_path(Path::new("events.jsonl")), None);
     assert_eq!(Language::from_path(Path::new("events.ndjson")), None);
+}
+
+#[test]
+fn detects_org_forced_language_aliases() {
+    assert_eq!(Language::from_name("org"), Some(Language::Org));
+    assert_eq!(Language::from_name("org-mode"), Some(Language::Org));
 }

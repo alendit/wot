@@ -14,6 +14,7 @@ pub mod ini;
 pub mod json;
 pub mod markdown;
 pub mod notebook;
+pub mod org;
 pub mod python;
 pub mod toml;
 pub mod xml;
@@ -45,6 +46,7 @@ pub fn parse_source(
         Language::Hcl => hcl::parse_with_options(path, source, max_depth, lenient),
         Language::Dockerfile => dockerfile::parse(path, source, max_depth),
         Language::Notebook => notebook::parse(path, source, max_depth),
+        Language::Org => org::parse(path, source, max_depth),
         Language::Rust
         | Language::TypeScript
         | Language::JavaScript

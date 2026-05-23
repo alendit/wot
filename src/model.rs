@@ -28,6 +28,7 @@ pub enum Language {
     Shell,
     Clojure,
     Elisp,
+    Org,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +66,7 @@ impl Language {
             Some("sh" | "bash" | "zsh") => Some(Self::Shell),
             Some("clj" | "cljs" | "cljc" | "bb") => Some(Self::Clojure),
             Some("el") => Some(Self::Elisp),
+            Some("org") => Some(Self::Org),
             Some("md" | "markdown") => Some(Self::Markdown),
             Some("py") => Some(Self::Python),
             Some("json") => Some(Self::Json),
@@ -180,6 +182,13 @@ impl Language {
                 backend: "pulldown-cmark",
             },
             LanguageSpec {
+                language: Self::Org,
+                names: &["org", "org-mode"],
+                extensions: &[".org"],
+                filenames: &[],
+                backend: "scanner",
+            },
+            LanguageSpec {
                 language: Self::Python,
                 names: &["python", "py"],
                 extensions: &[".py"],
@@ -279,6 +288,7 @@ impl fmt::Display for Language {
             Self::Shell => write!(formatter, "shell"),
             Self::Clojure => write!(formatter, "clojure"),
             Self::Elisp => write!(formatter, "elisp"),
+            Self::Org => write!(formatter, "org"),
         }
     }
 }

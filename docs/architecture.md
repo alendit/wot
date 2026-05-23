@@ -126,12 +126,12 @@ and Emacs Lisp. It extracts high-value syntactic declarations such as imports,
 exports, modules, classes, functions, methods, types, shell functions, and Lisp
 forms.
 
-Structured and document parsers live in dedicated modules for Markdown, Python,
-JSON, YAML, TOML, INI, dotenv, XML, HCL/Terraform, Dockerfile/Containerfile, and
-Jupyter notebooks. YAML and TOML validate in strict mode and can skip validation
-for lenient partial outlines. HCL and XML support partial output for selected
-unclosed structures in lenient mode. JSON and notebooks remain strict unless
-small-file verbatim mode is selected.
+Structured and document parsers live in dedicated modules for Markdown, Org mode,
+Python, JSON, YAML, TOML, INI, dotenv, XML, HCL/Terraform,
+Dockerfile/Containerfile, and Jupyter notebooks. YAML and TOML validate in
+strict mode and can skip validation for lenient partial outlines. HCL and XML
+support partial output for selected unclosed structures in lenient mode. JSON
+and notebooks remain strict unless small-file verbatim mode is selected.
 
 ### Source Mapping
 

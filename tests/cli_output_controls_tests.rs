@@ -108,6 +108,8 @@ fn lists_supported_languages_as_markdown_and_json() {
         .success()
         .stdout(predicate::str::contains("rust"))
         .stdout(predicate::str::contains(".rs"))
+        .stdout(predicate::str::contains("org"))
+        .stdout(predicate::str::contains(".org"))
         .stdout(predicate::str::contains("tree-sitter"));
 
     let mut json_command = Command::cargo_bin("wot").unwrap();
@@ -129,6 +131,19 @@ fn lists_supported_languages_as_markdown_and_json() {
                 .as_array()
                 .unwrap()
                 .contains(&Value::from(".rs"))));
+    assert!(json["languages"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|language| language["id"] == "org"
+            && language["names"]
+                .as_array()
+                .unwrap()
+                .contains(&Value::from("org-mode"))
+            && language["extensions"]
+                .as_array()
+                .unwrap()
+                .contains(&Value::from(".org"))));
 }
 
 #[test]
@@ -187,6 +202,14 @@ fn language_forces_extensionless_files_and_stdin_requires_language() {
         .assert()
         .success()
         .stdout(predicate::str::contains("- def run [L1-L2]"));
+
+    let mut org_stdin_with_language = Command::cargo_bin("wot").unwrap();
+    org_stdin_with_language
+        .args(["--stdin", "--language", "org", "--min-lines", "0"])
+        .write_stdin("* Root\n** Child\n")
+        .assert()
+        .success()
+        .stdout("- Root [L1-L2]\n  - Child [L2]\n");
 
     let mut stdin_with_file = Command::cargo_bin("wot").unwrap();
     stdin_with_file

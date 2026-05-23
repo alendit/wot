@@ -34,6 +34,21 @@ fn outlines_multiple_files_in_input_order() {
 }
 
 #[test]
+fn outlines_org_files_from_the_cli() {
+    let directory = tempdir().unwrap();
+    let org = directory.path().join("notes.org");
+    fs::write(&org, "* Root\nbody\n** TODO Child :tag:\n").unwrap();
+
+    let mut command = Command::cargo_bin("wot").unwrap();
+    command.args(["--min-lines", "0"]).arg(&org);
+
+    command.assert().success().stdout(
+        predicate::str::contains("- Root [L1-L3]")
+            .and(predicate::str::contains("  - TODO Child :tag: [L3]")),
+    );
+}
+
+#[test]
 fn outlines_structured_files_from_the_cli() {
     let directory = tempdir().unwrap();
     let yaml = directory.path().join("config.yaml");

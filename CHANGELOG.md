@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-05-23
+
+- Add heading-only Org mode outline support for `.org` files and
+  `--language org`.
+
 ## 0.2.0 - 2026-05-20
 
 - Add `wot setup` to explicitly install the bundled skill into project-local or
