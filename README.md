@@ -30,9 +30,8 @@ wot setup
 Use `wot setup -g` for `~/.agents`, and add `--claude` to also install into
 `.claude` or `~/.claude`.
 
-Add `--hooks` to install non-blocking PreToolUse reminders that nudge agents to
-use `wot` before broad file reads when they are still deciding which sections
-matter:
+Add `--hooks` to install non-blocking PreToolUse reminders to use `wot` for a
+file overview:
 
 ```bash
 wot setup --hooks
@@ -100,9 +99,8 @@ Setup options:
 
 The hook runs `wot hook-check` before supported tool use. It never blocks,
 asks for approval, rewrites tool input, or replaces normal skill guidance. When
-the pending tool call looks like broad file exploration, it injects a short
-model-visible reminder to use `rg --files` for candidates and `wot` for
-outlines before broad reads.
+the pending tool call looks like broad file exploration, it injects a brief
+model-visible reminder to use `wot` for a file overview.
 
 ## Release
 

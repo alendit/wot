@@ -17,7 +17,7 @@ const DEFAULT_MIN_LINES: usize = 40;
 const SKILL_NAME: &str = "create-file-outline";
 const SKILL_CONTENT: &str = include_str!("../skills/create-file-outline/SKILL.md");
 const HOOK_COMMAND: &str = "wot hook-check";
-const HOOK_CONTEXT: &str = "wot: This looks like broad file exploration. If you are deciding which parts of files are worth reading, reduce selection uncertainty first: use `rg --files` for candidates, then `wot --min-lines 0 <file>...` for outlines and line ranges before broad reads.";
+const HOOK_CONTEXT: &str = "Use wot for a file overview.";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum OutputFormat {

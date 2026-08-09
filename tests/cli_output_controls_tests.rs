@@ -435,10 +435,10 @@ fn hook_check_emits_advisory_context_for_broad_reads() {
     let json: Value = serde_json::from_slice(&output).unwrap();
 
     assert_eq!(json["hookSpecificOutput"]["hookEventName"], "PreToolUse");
-    assert!(json["hookSpecificOutput"]["additionalContext"]
-        .as_str()
-        .unwrap()
-        .contains("selection uncertainty"));
+    assert_eq!(
+        json["hookSpecificOutput"]["additionalContext"],
+        "Use wot for a file overview."
+    );
 }
 
 #[test]

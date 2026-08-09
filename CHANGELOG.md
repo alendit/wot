@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 - 2026-08-09
+
+- Shorten the advisory hook reminder to "Use wot for a file overview."
+
 ## 0.3.0 - 2026-05-23
 
 - Add heading-only Org mode outline support for `.org` files and

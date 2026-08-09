@@ -72,9 +72,8 @@ Setup hooks:
 - The hooks run `wot hook-check`.
 - The hooks never block tool use, ask for approval, rewrite tool input, or
   replace these skill instructions.
-- When a pending tool call looks like broad file exploration, the hook nudges
-  the agent to use `rg --files` for candidates and `wot` for outlines before
-  broad reads.
+- When a pending tool call looks like broad file exploration, the hook briefly
+  nudges the agent to use `wot` for a file overview.
 
 ## When To Use
 
