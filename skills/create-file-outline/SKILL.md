@@ -43,7 +43,7 @@ For Codex, `--hooks` writes `.codex/hooks.json` or
 Run:
 
 ```bash
-wot [OPTIONS] <file>...
+wot [OPTIONS] <path>...
 ```
 
 Prefer `wot --help` for current flag details and `wot --list-supported` for the
@@ -54,14 +54,24 @@ source of truth.
 Defaults:
 
 - `--max-depth` defaults to `3`.
+- `--walk-depth` defaults to `3`; directory inputs recurse automatically with
+  the target directory at depth `0`.
 - `--max-items` defaults to `200`.
 - `--min-lines` defaults to `40`; recognized files at or below that line count print verbatim.
-- Inputs are explicit files by default; `--stdin` reads stdin and requires `--language`.
+- Inputs may be explicit files or directories; `--stdin` reads stdin and requires `--language`.
 - Output is Markdown by default. Use `--format json` for machine-readable output.
 - Markdown file headers are off by default. Use `--header` to print `# path/to/file`.
+- Directory Markdown is an integrated tree with file summaries nested beneath
+  each path and explicit markers when `--walk-depth` stops expansion.
+- Directory discovery honors ignore rules, includes non-ignored hidden paths,
+  skips `.git`, symlinks, and unsupported descendants, and is deterministically
+  ordered.
 - Outline items render as `- label [Lstart-Lend]`.
 - Same-line JSON siblings can use `Lx:Cy-Lx:Cz` ranges.
-- `.env` secret-like values are redacted in labels.
+- Discovered `.env*` files always use outline mode so secret-like values remain
+  redacted in labels.
+- JSON keeps `files` and `errors` and adds directory-tree metadata in
+  `directories`.
 - `--list-supported` prints recognized languages/extensions and parser backend.
 - `--lenient` enables safe partial parsing for YAML, TOML, HCL, and XML.
 
@@ -116,23 +126,28 @@ Skip `wot` when:
    small files.
 4. Use `wot --max-depth 2` for quick overviews and `--max-depth 3` or higher
    when the user needs more structure.
-5. Pass multiple files in the order the user should read them.
-6. If a file fails, read stderr; `wot` continues processing later files and exits
+5. Use `wot DIRECTORY` for a repository or subtree overview, and raise
+   `--walk-depth` only when visible depth-limit markers hide relevant paths.
+6. Pass multiple file or directory roots in the order the user should read them.
+7. If a file fails, read stderr; `wot` continues processing later files and exits
    nonzero when any file fails.
-7. For unsupported file types, use `--language LANG` when the intended language
-   is known.
+8. For unsupported explicit files, use `--language LANG` when the intended
+   language is known. Do not combine `--language` with directory inputs.
 
 ## Upstream Or Comparison Workflow
 
 For cloned upstream projects or project comparisons:
 
-1. Use `rg --files` to find candidate entry points.
-2. Use `wot` on the candidate docs/source files to get structure and line ranges.
+1. Run `wot --walk-depth 2 DIRECTORY` for a compact project map.
+2. Raise the walk depth or pass selected files when the tree identifies relevant
+   subtrees and entry points.
 3. Read only the relevant ranges with normal file tools.
 
 ## Examples
 
 ```bash
+wot .
+wot --walk-depth 4 src tests
 wot README.md notes.org src/lib.rs src/main.py package.json config.yaml Cargo.toml Dockerfile
 wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs

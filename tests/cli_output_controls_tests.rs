@@ -58,6 +58,7 @@ fn renders_json_outline_with_nested_nodes_and_ranges() {
     let json: Value = serde_json::from_slice(&output).unwrap();
 
     assert_eq!(json["errors"].as_array().unwrap().len(), 0);
+    assert!(json["directories"].as_array().unwrap().is_empty());
     assert_eq!(json["files"][0]["path"], python.display().to_string());
     assert_eq!(json["files"][0]["language"], "python");
     assert_eq!(json["files"][0]["mode"], "outline");

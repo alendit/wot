@@ -2,39 +2,42 @@
 
 ## Project Overview
 
-`wot` is a Rust CLI and library for turning explicit source, config, and document
-files into compact, agent-friendly context. Its primary consumers are humans and
-agents that need quick file outlines, Markdown snippets, or machine-readable JSON
-without opening whole files.
+`wot` is a Rust CLI and library for turning source, config, and document files or
+directory trees into compact, agent-friendly context. Its primary consumers are
+humans and agents that need quick file outlines, repository maps, Markdown
+snippets, or machine-readable JSON without opening whole files.
 
 The main runtime surface is the `wot` binary. The library modules expose the same
 core parser and renderer building blocks for tests and future integrations. The
-project does not own durable application data; it reads caller-provided files or
-stdin and writes outlines, verbatim content, supported-language metadata, and
-errors to stdout/stderr.
+project does not own durable application data; it reads caller-provided paths or
+stdin and writes outlines, verbatim content, directory metadata,
+supported-language metadata, and errors to stdout/stderr.
 
 ## Table Of Contents
 
-- architecture overview: L29-L61
-- boundaries and invariants: L63-L82
-- repository mapping: L84-L101
-- components: L103-L172
-- data and control flow: L174-L198
-- public surfaces: L200-L216
-- extension points: L218-L228
-- testing and verification: L230-L244
-- change management: L246-L251
-- architecture discussion: L253-L273
+- architecture overview: L29-L71
+- boundaries and invariants: L72-L97
+- repository mapping: L98-L120
+- components: L121-L201
+- data and control flow: L202-L234
+- public surfaces: L235-L256
+- extension points: L257-L268
+- testing and verification: L269-L286
+- change management: L287-L293
+- architecture discussion: L294-L316
 
 ## Architecture Overview
 
-The normal runtime path is a thin CLI shell that validates input mode, reads
-sources, chooses or forces a language, delegates parsing, applies output budgets,
-and delegates final output formatting to the renderer.
+The normal runtime path is a thin CLI shell that validates input mode, expands
+directory roots through a bounded discovery adapter, reads sources, chooses or
+forces a language, delegates parsing, applies output budgets, and delegates final
+output formatting to the renderer.
 
 ```mermaid
 flowchart LR
     User["User or agent"] --> CLI["CLI shell"]
+    CLI --> Discovery["Bounded directory discovery"]
+    Discovery --> Model
     CLI --> Model["Outline model and language registry"]
     CLI --> Parsers["Parser facade"]
     Parsers --> Code["Tree-sitter code parser"]
@@ -43,20 +46,26 @@ flowchart LR
     Parsers --> Model
     CLI --> Renderer["Markdown and JSON renderer"]
     Renderer --> User
+    CLI --> Hook["Pure hook rewrite policy"]
+    Hook --> Model
     CLI --> Skill["Bundled agent skill setup"]
     Tests["Parser, renderer, CLI tests"] --> CLI
     Tests --> Parsers
     Tests --> Renderer
 ```
 
-The product shape has five major parts:
+The product shape has seven major parts:
 
 - `src/model.rs` defines the shared outline, range, node-kind, and language
   vocabulary.
 - `src/parsers.rs` routes a selected `Language` to concrete parser modules.
 - `src/parsers/*` builds `Outline` trees from specific file families.
+- `src/discovery.rs` owns bounded, gitignore-aware directory expansion and its
+  deterministic path tree.
 - `src/renderer.rs` owns Markdown, JSON, supported-language output, and node
   budgeting.
+- `src/hook.rs` owns the pure, side-effect-free policy for rewriting eligible
+  broad shell reads into `wot` commands.
 - `src/cli.rs` owns argument parsing, input reading, per-file error collection,
   and process exit behavior.
 
@@ -72,6 +81,11 @@ The product shape has five major parts:
 - Language detection is deterministic and based on explicit file names,
   extensions, or `--language`. Unsupported files remain unsupported unless the
   caller forces a language.
+- Directory inputs recurse automatically. `--walk-depth` bounds filesystem
+  traversal separately from parser `--max-depth`; every unexpanded boundary is
+  represented explicitly in Markdown and JSON.
+- Directory discovery honors ignore rules, includes non-ignored hidden entries,
+  never enters `.git` or follows symlinks, and admits only recognized files.
 - Markdown is the default human output. JSON is the machine output and must stay
   valid even when some input files fail.
 - `--max-items` applies a deterministic preorder cap after parsing. `--max-depth`
@@ -86,6 +100,10 @@ The product shape has five major parts:
 - `src/main.rs` is the binary entry point. It must not contain product logic.
 - `src/cli.rs` is the command adapter. It may depend on parser, renderer, model,
   and error modules, but parser modules should not depend on it.
+- `src/discovery.rs` is the CLI-side filesystem adapter. It may depend on the
+  language registry to filter supported paths but not on parsers or renderers.
+- `src/hook.rs` classifies and rewrites shell command input without performing
+  IO. It may use the language registry to reject unsupported file paths.
 - `src/model.rs` is the shared contract between parsing, rendering, and tests.
 - `src/source_map.rs` translates byte offsets to user-facing source positions.
 - `src/parsers.rs` is the parser facade and dispatch table.
@@ -140,12 +158,21 @@ when they need source-derived ranges from scanner offsets. Tree-sitter parsers
 use parser-provided row positions directly. Keeping this helper small preserves a
 single convention for precise ranges across output formats.
 
+### Directory Discovery
+
+`src/discovery.rs` wraps `ignore::WalkBuilder` for automatic directory inputs.
+It owns ignore-file handling, hidden-path inclusion, `.git` and symlink
+exclusion, the default-bounded walk, deterministic sibling ordering, and pruning
+of branches without supported descendants. It returns paths and depth-boundary
+metadata only; source reads, parsing, and output formatting stay outside it.
+
 ### Renderer
 
 `src/renderer.rs` owns output shaping after parsing. It converts `Outline` values
 into `RenderedFile` entries, applies preorder node caps, reports truncation and
-omitted-node counts, formats Markdown output, emits JSON response objects, and
-renders supported-language metadata.
+omitted-node counts, formats explicit files and integrated directory trees,
+emits JSON response objects with additive directory metadata, and renders
+supported-language metadata.
 
 This module is the boundary that keeps `src/cli.rs` from learning the details of
 JSON schemas or Markdown list formatting. Renderer tests cover nested Markdown,
@@ -154,10 +181,11 @@ precise ranges, and budgeting behavior through CLI tests.
 ### CLI Shell
 
 `src/cli.rs` owns the `clap` argument model and process workflow. It validates
-mutually exclusive input modes, reads files or stdin, resolves forced languages,
-chooses verbatim versus outline mode, collects per-file errors while continuing
-later files, delegates parsing, delegates rendering, and returns a nonzero
-process result when any input fails.
+mutually exclusive input modes, classifies file and directory roots, reads files
+or stdin, resolves forced languages, chooses verbatim versus outline mode,
+collects traversal and per-file errors while continuing later inputs, delegates
+parsing, delegates rendering, and returns a nonzero process result when an actual
+input fails. Reaching `--walk-depth` is expected success, not an error.
 
 The CLI does not own parser semantics or output schemas. CLI tests verify default
 headers, JSON validity, continued processing after errors, list-supported output,
@@ -177,10 +205,16 @@ side effect of `cargo install`.
 sequenceDiagram
     participant Caller
     participant CLI
+    participant Discovery
     participant Parsers
     participant Renderer
-    Caller->>CLI: wot options + files or stdin
-    CLI->>CLI: validate mode, read source, resolve language
+    Caller->>CLI: wot options + paths or stdin
+    CLI->>CLI: validate mode and classify each path
+    alt directory input
+        CLI->>Discovery: discover(path, walk_depth)
+        Discovery-->>CLI: deterministic supported-file tree + boundaries
+    end
+    CLI->>CLI: read source and resolve language
     alt source lines <= --min-lines
         CLI->>Renderer: RenderedFile::verbatim
     else outline mode
@@ -192,26 +226,31 @@ sequenceDiagram
     CLI-->>Caller: per-file stderr and nonzero exit on failures
 ```
 
-For multiple file inputs, the CLI processes paths in caller order and appends
-successful entries in that same order. Errors are collected separately so JSON
-output remains a valid response object and Markdown output can still include
-later successful files before the process exits nonzero.
+For multiple roots, the CLI preserves caller order. Explicit files retain their
+existing presentation; directory children use deterministic lexical order and
+remain duplicated when roots overlap. Errors are collected separately so JSON
+output remains valid and Markdown can still include later successful inputs
+before the process exits nonzero.
 
 ## Public Surfaces
 
-- `wot [OPTIONS] <file>...` is the main command. `wot --help` is the exhaustive
+- `wot [OPTIONS] <path>...` is the main command. Files retain existing behavior;
+  directories recurse automatically. `wot --help` is the exhaustive
   flag reference.
+- `--walk-depth` defaults to `3`, counts the target directory as depth `0`, and
+  is independent from in-file `--max-depth`.
 - `--format markdown|json` selects human or machine output.
 - `--list-supported` lists language ids, aliases, extensions, filenames, and
   backend names. It is the authoritative installed-format inventory.
 - `--language` and `--stdin` let callers bypass path detection for extensionless
-  files and piped content.
+  files and piped content. Forced language mode rejects directory inputs.
 - `wot setup` installs the bundled skill into project-local `.agents`; `-g`
   installs globally under `~/.agents`; `--claude` also installs into `.claude` or
   `~/.claude`.
-- The JSON response schema has top-level `files` and `errors` arrays. Outline
-  entries include `nodes`, `truncated`, and `omitted_nodes`; verbatim entries
-  include `content`.
+- The JSON response schema has top-level `files`, `directories`, and `errors`
+  arrays. Outline entries include `nodes`, `truncated`, and `omitted_nodes`;
+  verbatim entries include `content`; directory roots include `max_depth`,
+  aggregate `truncated`, and path-reference entries.
 - `skills/create-file-outline/SKILL.md` is the bundled Codex skill surface and
   intentionally points agents back to `wot --help` for current details.
 
@@ -232,23 +271,25 @@ later successful files before the process exits nonzero.
 Parser tests cover file-family structure, nesting, line ranges, max-depth, invalid
 input, redaction, and lenient behavior where available. CLI tests cover
 multi-file ordering, unsupported-file failure behavior, JSON output, stdin,
-forced languages, headers, budgets, and list-supported output. Renderer and
-source-map tests pin formatting and range behavior independently of full CLI runs.
+forced languages, headers, budgets, list-supported output, recursive traversal,
+ignore and hidden-path policy, symlink exclusion, depth markers, integrated tree
+formatting, and JSON directory metadata. Renderer and source-map tests pin
+formatting and range behavior independently of full CLI runs.
 
 The release verification gate is:
 
 ```bash
-rtk cargo test
-rtk cargo fmt --check
-rtk cargo clippy --all-targets --all-features
+cargo test
+cargo fmt --check
+cargo clippy --all-targets --all-features
 ```
 
 ## Change Management
 
-Update this document when a change moves responsibilities between CLI, parser,
-model, renderer, setup, or build-script boundaries; changes JSON schema or
-Markdown formatting; adds or removes supported language families; changes range
-semantics; or changes skill installation behavior.
+Update this document when a change moves responsibilities between discovery,
+CLI, parser, model, renderer, setup, or build-script boundaries; changes JSON
+schema or Markdown formatting; adds or removes supported language families;
+changes range semantics; or changes skill installation behavior.
 
 ## Architecture Discussion
 
@@ -260,10 +301,12 @@ That gap is now closed: `src/renderer.rs` owns output shaping, while `src/cli.rs
 coordinates IO and process policy.
 
 Dependency direction is straightforward: parser and renderer modules depend on
-the shared model, while the CLI depends on both as an adapter. Parser backends do
-not depend on CLI behavior. Side effects are concentrated in `src/cli.rs`: runtime
-input/output, explicit `wot setup` skill installation, and filesystem reads for
-explicit user inputs.
+the shared model, discovery depends only on the language registry, and the CLI
+coordinates discovery, parsing, and rendering as the outer adapter. Parser
+backends do not depend on CLI behavior. Hook classification is isolated in
+`src/hook.rs`, while hook JSON IO remains in the CLI adapter. Filesystem walking
+is isolated in `src/discovery.rs`; source IO, runtime output, and explicit `wot
+setup` installation remain in `src/cli.rs`.
 
 The remaining architectural delta is mostly about scale. `src/model.rs` currently
 owns both the core outline model and the complete language registry. That is

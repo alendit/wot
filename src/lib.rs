@@ -1,4 +1,5 @@
 pub mod cli;
+mod discovery;
 pub mod error;
 mod hook;
 pub mod model;

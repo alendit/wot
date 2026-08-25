@@ -4,11 +4,11 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("{path}: is a directory")]
-    Directory { path: PathBuf },
-
     #[error("{path}: unsupported file type")]
     UnsupportedFile { path: PathBuf },
+
+    #[error("{path}: directory traversal failed: {message}")]
+    DirectoryTraversal { path: PathBuf, message: String },
 
     #[error("{path}: {source}")]
     Io {

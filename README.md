@@ -45,8 +45,14 @@ For Codex, `--hooks` writes `.codex/hooks.json` or `~/.codex/hooks.json`. With
 ## Usage
 
 ```bash
-wot [OPTIONS] <file>...
+wot [OPTIONS] <path>...
 ```
+
+Each path may be a supported file or a directory. Directory inputs are traversed
+automatically to a default depth of `3`, with the target directory at depth `0`.
+The Markdown output nests each discovered file's outline or short verbatim
+content into a deterministic file tree. When a directory is not expanded because
+of the depth limit, its tree node says so explicitly.
 
 To estimate the installed Codex hook's token overhead and observational savings
 from rollout transcripts, run the dependency-free bulk analyzer:
@@ -81,6 +87,8 @@ extensions, special filenames, and parser backends for the installed build.
 Examples:
 
 ```bash
+wot .
+wot --walk-depth 4 src tests
 wot README.md notes.org src/lib.rs src/main.py data.json config.yaml Cargo.toml Dockerfile
 wot --max-depth 2 docs/spec.md src/app.tsx scripts/build.sh analysis.ipynb
 wot --format json --min-lines 0 src/lib.rs
@@ -103,10 +111,23 @@ $ wot --min-lines 0 README.md
 
 By default, `wot` prints recognized files of 40 lines or fewer verbatim. Larger files print compact Markdown outline items such as `- def run [L10-L18]`; pass `--min-lines 0` to force outlines for every file. Same-line JSON sections may include columns such as `L1:C2-L1:C7`.
 
+Recursive discovery honors `.gitignore`, `.ignore`, repository excludes, and
+global gitignore rules while still considering non-ignored hidden paths such as
+`.github`. It never enters `.git` or follows symlinks, and silently skips
+unsupported descendants. Discovered `.env*` files always use redacting outline
+mode rather than verbatim output. `--language` remains available for explicit
+files and stdin, but cannot be combined with a directory input.
+
+JSON output retains the top-level `files` and `errors` arrays and adds a
+`directories` array. Directory entries describe the nested path tree and visible
+depth truncation; successful file details remain in `files`.
+
 Useful options:
 
 - `--format markdown|json` chooses text or machine-readable output.
 - `--header` prints file headers in Markdown output.
+- `--walk-depth N` limits recursive filesystem traversal; default is `3`.
+- `--max-depth N` limits nesting inside each file outline; default is `3`.
 - `--max-items N` caps outline nodes; default is `200`.
 - `--min-lines N` prints recognized files at or below `N` lines verbatim; default is `40`.
 - `--language LANG` forces parsing as a supported language.

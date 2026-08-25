@@ -112,18 +112,23 @@ fn applies_max_depth_to_cli_output() {
 }
 
 #[test]
-fn rejects_directories_and_unsupported_files() {
+fn recurses_directories_and_rejects_unsupported_explicit_files() {
     let directory = tempdir().unwrap();
+    let supported = directory.path().join("kept.rs");
     let unsupported = directory.path().join("notes.txt");
+    fs::write(&supported, "pub fn kept() {}\n").unwrap();
     fs::write(&unsupported, "hello").unwrap();
 
     let mut command = Command::cargo_bin("wot").unwrap();
-    command.args([directory.path().as_os_str(), unsupported.as_os_str()]);
+    command
+        .args(["--min-lines", "0"])
+        .args([directory.path().as_os_str(), unsupported.as_os_str()]);
 
-    command.assert().failure().stderr(
-        predicate::str::contains("is a directory")
-            .and(predicate::str::contains("unsupported file type")),
-    );
+    command
+        .assert()
+        .failure()
+        .stdout(predicate::str::contains("- fn kept [L1]"))
+        .stderr(predicate::str::contains("unsupported file type"));
 }
 
 #[test]

@@ -6,7 +6,28 @@ use crate::model::{Language, LanguageSpec, NodeKind, Outline, OutlineNode, Posit
 #[derive(Debug, Clone, Serialize)]
 struct JsonResponse {
     files: Vec<RenderedFile>,
+    directories: Vec<JsonDirectoryRoot>,
     errors: Vec<RenderError>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum RenderedRoot {
+    File(RenderedFile),
+    Directory(RenderedDirectory),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct RenderedDirectory {
+    pub path: String,
+    pub walk_depth: usize,
+    pub depth_limited: bool,
+    pub entries: Vec<RenderedDirectoryEntry>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum RenderedDirectoryEntry {
+    Directory(RenderedDirectory),
+    File(RenderedFile),
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -48,7 +69,7 @@ impl RenderedFile {
         }
     }
 
-    fn path(&self) -> &str {
+    pub(crate) fn path(&self) -> &str {
         match self {
             Self::Outline { path, .. } | Self::Verbatim { path, .. } => path,
         }
@@ -102,23 +123,24 @@ pub fn render_markdown(files: &[RenderedFile], header: bool) -> String {
         if index > 0 {
             output.push('\n');
         }
+        render_file_markdown(&mut output, file, header);
+    }
 
-        match file {
-            RenderedFile::Outline { nodes, .. } => {
-                if header {
-                    output.push_str("# ");
-                    output.push_str(file.path());
-                    output.push('\n');
-                }
-                render_nodes(&mut output, nodes, 0);
-            }
-            RenderedFile::Verbatim { content, .. } => {
-                if header {
-                    output.push_str("# ");
-                    output.push_str(file.path());
-                    output.push('\n');
-                }
-                output.push_str(content);
+    output
+}
+
+pub(crate) fn render_roots_markdown(roots: &[RenderedRoot], header: bool) -> String {
+    let mut output = String::new();
+
+    for (index, root) in roots.iter().enumerate() {
+        if index > 0 {
+            output.push('\n');
+        }
+
+        match root {
+            RenderedRoot::File(file) => render_file_markdown(&mut output, file, header),
+            RenderedRoot::Directory(directory) => {
+                render_directory_markdown(&mut output, directory, 0, true)
             }
         }
     }
@@ -127,7 +149,33 @@ pub fn render_markdown(files: &[RenderedFile], header: bool) -> String {
 }
 
 pub fn render_json(files: Vec<RenderedFile>, errors: Vec<RenderError>) -> String {
-    let response = JsonResponse { files, errors };
+    let response = JsonResponse {
+        files,
+        directories: Vec::new(),
+        errors,
+    };
+    serde_json::to_string_pretty(&response).expect("serialize output")
+}
+
+pub(crate) fn render_roots_json(roots: &[RenderedRoot], errors: Vec<RenderError>) -> String {
+    let mut files = Vec::new();
+    let mut directories = Vec::new();
+
+    for root in roots {
+        match root {
+            RenderedRoot::File(file) => files.push(file.clone()),
+            RenderedRoot::Directory(directory) => {
+                collect_directory_files(directory, &mut files);
+                directories.push(JsonDirectoryRoot::from(directory));
+            }
+        }
+    }
+
+    let response = JsonResponse {
+        files,
+        directories,
+        errors,
+    };
     serde_json::to_string_pretty(&response).expect("serialize output")
 }
 
@@ -166,6 +214,215 @@ fn render_nodes(output: &mut String, nodes: &[JsonNode], depth: usize) {
         output.push_str("]\n");
 
         render_nodes(output, &node.children, depth + 1);
+    }
+}
+
+fn render_file_markdown(output: &mut String, file: &RenderedFile, header: bool) {
+    match file {
+        RenderedFile::Outline { nodes, .. } => {
+            if header {
+                output.push_str("# ");
+                output.push_str(file.path());
+                output.push('\n');
+            }
+            render_nodes(output, nodes, 0);
+        }
+        RenderedFile::Verbatim { content, .. } => {
+            if header {
+                output.push_str("# ");
+                output.push_str(file.path());
+                output.push('\n');
+            }
+            output.push_str(content);
+        }
+    }
+}
+
+fn render_directory_markdown(
+    output: &mut String,
+    directory: &RenderedDirectory,
+    depth: usize,
+    is_root: bool,
+) {
+    let indent = "  ".repeat(depth);
+    let label = if is_root {
+        directory.path.as_str()
+    } else {
+        display_name(&directory.path)
+    };
+    output.push_str(&indent);
+    output.push_str("- ");
+    output.push_str(&markdown_code_span(&directory_label(label)));
+    if directory.depth_limited {
+        output.push_str(&format!(
+            " *(not expanded: walk depth limit {})*",
+            directory.walk_depth
+        ));
+    }
+    output.push('\n');
+
+    if directory.depth_limited {
+        return;
+    }
+    if directory.entries.is_empty() {
+        output.push_str(&"  ".repeat(depth + 1));
+        output.push_str("- *(no supported files)*\n");
+        return;
+    }
+
+    for entry in &directory.entries {
+        match entry {
+            RenderedDirectoryEntry::Directory(child) => {
+                render_directory_markdown(output, child, depth + 1, false)
+            }
+            RenderedDirectoryEntry::File(file) => {
+                render_tree_file_markdown(output, file, depth + 1)
+            }
+        }
+    }
+}
+
+fn render_tree_file_markdown(output: &mut String, file: &RenderedFile, depth: usize) {
+    let indent = "  ".repeat(depth);
+    output.push_str(&indent);
+    output.push_str("- ");
+    output.push_str(&markdown_code_span(display_name(file.path())));
+    output.push('\n');
+
+    match file {
+        RenderedFile::Outline { nodes, .. } => render_nodes(output, nodes, depth + 1),
+        RenderedFile::Verbatim {
+            language, content, ..
+        } => render_verbatim_block(output, language, content, depth + 1),
+    }
+}
+
+fn render_verbatim_block(output: &mut String, language: &str, content: &str, depth: usize) {
+    let indent = "  ".repeat(depth);
+    let fence = markdown_fence(content);
+    output.push_str(&indent);
+    output.push_str(&fence);
+    output.push_str(language);
+    output.push('\n');
+    for line in content.split_inclusive('\n') {
+        output.push_str(&indent);
+        output.push_str(line);
+        if !line.ends_with('\n') {
+            output.push('\n');
+        }
+    }
+    output.push_str(&indent);
+    output.push_str(&fence);
+    output.push('\n');
+}
+
+fn markdown_fence(content: &str) -> String {
+    "`".repeat(longest_backtick_run(content).saturating_add(1).max(3))
+}
+
+fn markdown_code_span(value: &str) -> String {
+    let delimiter = "`".repeat(longest_backtick_run(value).saturating_add(1).max(1));
+    if value.contains('`') {
+        format!("{delimiter} {value} {delimiter}")
+    } else {
+        format!("{delimiter}{value}{delimiter}")
+    }
+}
+
+fn directory_label(value: &str) -> String {
+    if value.ends_with('/') || value.ends_with('\\') {
+        value.to_owned()
+    } else {
+        format!("{value}{}", std::path::MAIN_SEPARATOR)
+    }
+}
+
+fn longest_backtick_run(value: &str) -> usize {
+    value
+        .split(|character| character != '`')
+        .map(str::len)
+        .max()
+        .unwrap_or(0)
+}
+
+fn display_name(path: &str) -> &str {
+    std::path::Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(path)
+}
+
+fn collect_directory_files(directory: &RenderedDirectory, files: &mut Vec<RenderedFile>) {
+    for entry in &directory.entries {
+        match entry {
+            RenderedDirectoryEntry::Directory(child) => collect_directory_files(child, files),
+            RenderedDirectoryEntry::File(file) => files.push(file.clone()),
+        }
+    }
+}
+
+impl RenderedDirectory {
+    fn truncated(&self) -> bool {
+        self.depth_limited
+            || self.entries.iter().any(|entry| match entry {
+                RenderedDirectoryEntry::Directory(child) => child.truncated(),
+                RenderedDirectoryEntry::File(_) => false,
+            })
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct JsonDirectoryRoot {
+    path: String,
+    max_depth: usize,
+    truncated: bool,
+    entries: Vec<JsonDirectoryEntry>,
+}
+
+impl From<&RenderedDirectory> for JsonDirectoryRoot {
+    fn from(directory: &RenderedDirectory) -> Self {
+        Self {
+            path: directory.path.clone(),
+            max_depth: directory.walk_depth,
+            truncated: directory.truncated(),
+            entries: directory
+                .entries
+                .iter()
+                .map(JsonDirectoryEntry::from)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "lowercase")]
+enum JsonDirectoryEntry {
+    Directory {
+        path: String,
+        truncated: bool,
+        entries: Vec<JsonDirectoryEntry>,
+    },
+    File {
+        path: String,
+    },
+}
+
+impl From<&RenderedDirectoryEntry> for JsonDirectoryEntry {
+    fn from(entry: &RenderedDirectoryEntry) -> Self {
+        match entry {
+            RenderedDirectoryEntry::Directory(directory) => Self::Directory {
+                path: directory.path.clone(),
+                truncated: directory.truncated(),
+                entries: directory
+                    .entries
+                    .iter()
+                    .map(JsonDirectoryEntry::from)
+                    .collect(),
+            },
+            RenderedDirectoryEntry::File(file) => Self::File {
+                path: file.path().to_owned(),
+            },
+        }
     }
 }
 

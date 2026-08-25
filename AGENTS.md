@@ -42,10 +42,10 @@ You must call `library` first unless the user provides an ID in `/org/project` f
 ## Project Guidance
 
 - `wot` is a small Rust CLI that emits compact, agent-friendly outlines for supported files.
-- Keep the CLI shell in `src/cli.rs` thin: argument parsing, file IO, per-file error reporting, and exit behavior belong there.
-- Keep parsing behavior in `src/parsers/*`, the shared outline model in `src/model.rs`, source-position mapping in `src/source_map.rs`, and Markdown output formatting in `src/renderer.rs`.
+- Keep the CLI shell in `src/cli.rs` thin: argument parsing, source IO, per-file error reporting, and exit behavior belong there; bounded directory discovery belongs in `src/discovery.rs`.
+- Keep parsing behavior in `src/parsers/*`, the shared outline model in `src/model.rs`, source-position mapping in `src/source_map.rs`, and Markdown/JSON output formatting in `src/renderer.rs`.
 - Preserve deterministic stdout. Output shape is user-facing behavior, so update parser, renderer, CLI tests, README examples, and the bundled skill together when changing it.
-- Inputs are explicit files today. Do not add directory walking, stdin, or repository scanning without making that product boundary explicit.
+- Positional inputs may be explicit files or automatically recursive directory roots. Keep directory walking bounded, gitignore-aware, deterministic, and visibly truncated at its configured depth; do not add implicit current-directory scanning.
 - The bundled Codex skill in `skills/create-file-outline/SKILL.md` is part of the product surface. Keep it aligned with CLI flags, supported languages, defaults, install behavior, and examples.
 - Prefer focused tests near the changed behavior:
   - parser tests for syntax extraction and ranges

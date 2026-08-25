@@ -6,13 +6,17 @@ use std::path::{Path, PathBuf};
 use clap::{Args as ClapArgs, Parser, Subcommand, ValueEnum};
 use serde_json::{json, Value};
 
+use crate::discovery::{self, DiscoveredDirectory, DiscoveredEntry};
 use crate::error::{Error, Result};
 use crate::hook;
 use crate::model::Language;
 use crate::parsers;
-use crate::renderer::{self, RenderError, RenderedFile};
+use crate::renderer::{
+    self, RenderError, RenderedDirectory, RenderedDirectoryEntry, RenderedFile, RenderedRoot,
+};
 
 const DEFAULT_MAX_DEPTH: usize = 3;
+const DEFAULT_WALK_DEPTH: usize = 3;
 const DEFAULT_MAX_ITEMS: usize = 200;
 const DEFAULT_MIN_LINES: usize = 40;
 const SKILL_NAME: &str = "create-file-outline";
@@ -30,8 +34,8 @@ enum OutputFormat {
 #[command(
     name = "wot",
     about = "Create compact outlines from source, config, and document files",
-    override_usage = "wot [OPTIONS] <file>...\n       wot setup [OPTIONS]\n       wot hook-check",
-    long_about = "Create compact Markdown table-of-contents style outlines from source, config, and document files.\n\nSupported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, .env, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.\n\nRanges are 1-based inclusive line ranges. When line-only ranges would be ambiguous, wot prints 1-based start-inclusive/end-exclusive columns as Lx:Cy-Lx:Cz."
+    override_usage = "wot [OPTIONS] <path>...\n       wot setup [OPTIONS]\n       wot hook-check",
+    long_about = "Create compact Markdown table-of-contents style outlines from source, config, and document files. Directory inputs are traversed recursively.\n\nSupported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, .env, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.\n\nRanges are 1-based inclusive line ranges. When line-only ranges would be ambiguous, wot prints 1-based start-inclusive/end-exclusive columns as Lx:Cy-Lx:Cz."
 )]
 struct Args {
     #[command(subcommand)]
@@ -39,6 +43,13 @@ struct Args {
 
     #[arg(long, default_value_t = DEFAULT_MAX_DEPTH)]
     max_depth: usize,
+
+    #[arg(
+        long,
+        default_value_t = DEFAULT_WALK_DEPTH,
+        help = "Maximum filesystem depth for directory inputs (target directory is depth 0)"
+    )]
+    walk_depth: usize,
 
     #[arg(long, value_enum, default_value_t = OutputFormat::Markdown)]
     format: OutputFormat,
@@ -64,7 +75,7 @@ struct Args {
     #[arg(long)]
     lenient: bool,
 
-    files: Vec<PathBuf>,
+    paths: Vec<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -97,11 +108,12 @@ pub fn run() -> Result<()> {
     run_with_config(args)
 }
 
-pub fn run_with_args(files: Vec<PathBuf>, max_depth: usize) -> Result<()> {
+pub fn run_with_args(paths: Vec<PathBuf>, max_depth: usize) -> Result<()> {
     run_with_config(Args {
         command: None,
-        files,
+        paths,
         max_depth,
+        walk_depth: DEFAULT_WALK_DEPTH,
         format: OutputFormat::Markdown,
         header: false,
         list_supported: false,
@@ -125,18 +137,22 @@ fn run_with_config(args: Args) -> Result<()> {
         return list_supported(&args);
     }
 
-    if args.stdin && !args.files.is_empty() {
+    if args.stdin && !args.paths.is_empty() {
         return cli_error("--stdin cannot be combined with file paths");
     }
     if args.stdin && args.language.is_none() {
         return cli_error("--stdin requires --language");
     }
-    if !args.stdin && args.files.is_empty() {
+    if !args.stdin && args.paths.is_empty() {
         return Err(Error::NoInput);
     }
 
+    if args.language.is_some() && args.paths.iter().any(|path| path.is_dir()) {
+        return cli_error("--language cannot be combined with directory inputs");
+    }
+
     let forced_language = parse_forced_language(args.language.as_deref())?;
-    let mut files = Vec::new();
+    let mut roots = Vec::new();
     let mut errors = Vec::new();
 
     if args.stdin {
@@ -154,18 +170,29 @@ fn run_with_config(args: Args) -> Result<()> {
                 forced_language,
             },
             &args,
+            false,
         ) {
-            Ok(file) => files.push(file),
+            Ok(file) => roots.push(RenderedRoot::File(file)),
             Err(error) => errors.push(RenderError::from(error)),
         }
     } else {
-        for path in &args.files {
-            match read_file_source(path, forced_language) {
-                Ok(input) => match render_source(input, &args) {
-                    Ok(file) => files.push(file),
+        for path in &args.paths {
+            if path.is_dir() {
+                let discovered = discovery::discover(path, args.walk_depth);
+                errors.extend(discovered.errors.into_iter().map(RenderError::from));
+                roots.push(RenderedRoot::Directory(render_discovered_directory(
+                    discovered.root,
+                    &args,
+                    &mut errors,
+                )));
+            } else {
+                match read_file_source(path, forced_language) {
+                    Ok(input) => match render_source(input, &args, false) {
+                        Ok(file) => roots.push(RenderedRoot::File(file)),
+                        Err(error) => errors.push(RenderError::from(error)),
+                    },
                     Err(error) => errors.push(RenderError::from(error)),
-                },
-                Err(error) => errors.push(RenderError::from(error)),
+                }
             }
         }
     }
@@ -173,13 +200,13 @@ fn run_with_config(args: Args) -> Result<()> {
     let had_errors = !errors.is_empty();
     match args.format {
         OutputFormat::Markdown => {
-            print!("{}", renderer::render_markdown(&files, args.header));
+            print!("{}", renderer::render_roots_markdown(&roots, args.header));
             for error in &errors {
                 eprintln!("{}", error.message);
             }
         }
         OutputFormat::Json => {
-            println!("{}", renderer::render_json(files, errors));
+            println!("{}", renderer::render_roots_json(&roots, errors));
         }
     }
 
@@ -201,12 +228,6 @@ struct InputSource {
 }
 
 fn read_file_source(path: &Path, forced_language: Option<Language>) -> Result<InputSource> {
-    if path.is_dir() {
-        return Err(Error::Directory {
-            path: path.to_path_buf(),
-        });
-    }
-
     let source = fs::read_to_string(path).map_err(|source| Error::Io {
         path: path.to_path_buf(),
         source,
@@ -218,7 +239,7 @@ fn read_file_source(path: &Path, forced_language: Option<Language>) -> Result<In
     })
 }
 
-fn render_source(input: InputSource, args: &Args) -> Result<RenderedFile> {
+fn render_source(input: InputSource, args: &Args, force_outline: bool) -> Result<RenderedFile> {
     let language = input
         .forced_language
         .or_else(|| Language::from_path(&input.path));
@@ -226,7 +247,7 @@ fn render_source(input: InputSource, args: &Args) -> Result<RenderedFile> {
         path: input.path.clone(),
     })?;
 
-    if line_count(&input.source) <= args.min_lines {
+    if !force_outline && line_count(&input.source) <= args.min_lines {
         return Ok(RenderedFile::verbatim(input.path, language, input.source));
     }
 
@@ -238,6 +259,41 @@ fn render_source(input: InputSource, args: &Args) -> Result<RenderedFile> {
         args.lenient,
     )?;
     Ok(RenderedFile::outline(outline, args.max_items))
+}
+
+fn render_discovered_directory(
+    directory: DiscoveredDirectory,
+    args: &Args,
+    errors: &mut Vec<RenderError>,
+) -> RenderedDirectory {
+    let mut entries = Vec::new();
+
+    for entry in directory.entries {
+        match entry {
+            DiscoveredEntry::Directory(child) => {
+                let child = render_discovered_directory(child, args, errors);
+                if child.depth_limited || !child.entries.is_empty() {
+                    entries.push(RenderedDirectoryEntry::Directory(child));
+                }
+            }
+            DiscoveredEntry::File(path) => {
+                let force_outline = Language::from_path(&path) == Some(Language::Dotenv);
+                match read_file_source(&path, None)
+                    .and_then(|input| render_source(input, args, force_outline))
+                {
+                    Ok(file) => entries.push(RenderedDirectoryEntry::File(file)),
+                    Err(error) => errors.push(RenderError::from(error)),
+                }
+            }
+        }
+    }
+
+    RenderedDirectory {
+        path: directory.path.display().to_string(),
+        walk_depth: directory.walk_depth,
+        depth_limited: directory.depth_limited,
+        entries,
+    }
 }
 
 fn line_count(source: &str) -> usize {
@@ -496,7 +552,7 @@ fn is_full_file_read(tool_input: Option<&Value>) -> bool {
 }
 
 fn list_supported(args: &Args) -> Result<()> {
-    if args.stdin || !args.files.is_empty() {
+    if args.stdin || !args.paths.is_empty() {
         return cli_error("--list-supported cannot be combined with input files or --stdin");
     }
 
