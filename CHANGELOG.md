@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.0 - 2026-08-25
+
+- Treat directory positional inputs as recursive outline roots by default, with
+  deterministic integrated-tree Markdown, additive JSON directory metadata,
+  gitignore-aware discovery, and visible `--walk-depth` truncation markers.
+- Include non-ignored hidden supported files during directory discovery while
+  skipping `.git`, symlinks, unsupported descendants, and verbatim `.env*`
+  output that could expose secret-like values.
+- Replace repeated advisory context on Codex Bash calls with deterministic
+  PreToolUse rewrites from eligible broad explicit-file reads to compact `wot`
+  outlines, including eligible segments in simple compound command lists.
+- Narrow automatic rewrites to whole-file displays, preserve bounded ranges and
+  instruction files, and add deterministic transcript auditing for silent
+  rewrites followed by same-file recovery reads.
+
 ## 0.3.1 - 2026-08-09
 
 - Shorten the advisory hook reminder to "Use wot for a file overview."
