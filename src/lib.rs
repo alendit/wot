@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod error;
+mod hook;
 pub mod model;
 pub mod parsers;
 pub mod renderer;

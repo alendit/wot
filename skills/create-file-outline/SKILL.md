@@ -26,8 +26,8 @@ Use `wot setup -g` for `/Users/dimitrivorona/.agents/skills/create-file-outline/
 Add `--claude` to also install into `.claude/skills/create-file-outline/SKILL.md`
 or `/Users/dimitrivorona/.claude/skills/create-file-outline/SKILL.md`.
 
-Add `--hooks` to also install non-blocking PreToolUse reminders for the selected
-setup targets:
+Add `--hooks` to install PreToolUse rewrites that replace eligible broad shell
+reads with `wot` outlines before execution:
 
 ```bash
 wot setup --hooks
@@ -67,13 +67,21 @@ Defaults:
 
 Setup hooks:
 
-- `wot setup --hooks` installs advisory PreToolUse hooks for Codex.
-- `wot setup --claude --hooks` also installs advisory PreToolUse hooks for Claude.
+- `wot setup --hooks` installs PreToolUse command-rewrite hooks for Codex.
+- `wot setup --claude --hooks` also installs them for Claude.
 - The hooks run `wot hook-check`.
-- The hooks never block tool use, ask for approval, rewrite tool input, or
-  replace these skill instructions.
-- When a pending tool call looks like broad file exploration, the hook briefly
-  nudges the agent to use `wot` for a file overview.
+- For explicit supported files, the hook rewrites whole-file `cat`, `nl`, and
+  `sed -n '1,$p'` displays to `wot --header`; the normal 40-line threshold keeps
+  small files verbatim.
+- It handles eligible segments in simple `&&`, `;`, or newline command lists.
+- It preserves bounded numeric ranges and never rewrites `AGENTS.md`,
+  `CLAUDE.md`, or `SKILL.md`.
+- It leaves pipelines, redirects, expansions, substitutions, transformations,
+  `head`/`tail`, stdin, and unsupported files unchanged.
+- Codex Bash rewrites add no model-visible reminder. Claude full-file `Read`
+  calls retain the short advisory because they cannot be replaced with Bash.
+- The hooks never block tool use, ask for approval, or replace these skill
+  instructions.
 
 ## When To Use
 

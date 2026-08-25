@@ -7,6 +7,7 @@ use clap::{Args as ClapArgs, Parser, Subcommand, ValueEnum};
 use serde_json::{json, Value};
 
 use crate::error::{Error, Result};
+use crate::hook;
 use crate::model::Language;
 use crate::parsers;
 use crate::renderer::{self, RenderError, RenderedFile};
@@ -71,7 +72,7 @@ enum Command {
     #[command(about = "Install the bundled agent skill")]
     Setup(SetupArgs),
 
-    #[command(about = "Run the advisory PreToolUse hook check")]
+    #[command(about = "Run the PreToolUse hook command-rewrite policy")]
     HookCheck,
 }
 
@@ -87,7 +88,7 @@ struct SetupArgs {
     #[arg(help = "Also install to .claude/skills or ~/.claude/skills", long)]
     claude: bool,
 
-    #[arg(help = "Also install advisory PreToolUse hooks", long)]
+    #[arg(help = "Also install PreToolUse command-rewrite hooks", long)]
     hooks: bool,
 }
 
@@ -340,7 +341,7 @@ fn install_codex_hook(base: &Path) -> Result<()> {
 
 fn install_claude_hook(base: &Path) -> Result<()> {
     let path = base.join(".claude").join("settings.json");
-    let entry = hook_entry("Bash|Read|Glob|Grep");
+    let entry = hook_entry("Bash|Read");
     install_pre_tool_hook(&path, entry)?;
     println!("installed wot hook to {}", path.display());
     Ok(())
@@ -444,7 +445,20 @@ fn hook_check() -> Result<()> {
         return Ok(());
     };
 
-    if should_emit_hook_context(&value) {
+    if let Some(command) = bash_command(&value).and_then(hook::rewrite_bash_command) {
+        println!(
+            "{}",
+            json!({
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "allow",
+                    "updatedInput": {
+                        "command": command
+                    }
+                }
+            })
+        );
+    } else if should_emit_hook_context(&value) {
         println!(
             "{}",
             json!({
@@ -460,16 +474,16 @@ fn hook_check() -> Result<()> {
 
 fn should_emit_hook_context(value: &Value) -> bool {
     match value.get("tool_name").and_then(Value::as_str) {
-        Some("Bash") => value
-            .get("tool_input")
-            .and_then(|tool_input| tool_input.get("command"))
-            .and_then(Value::as_str)
-            .is_some_and(is_broad_shell_exploration),
         Some("Read") => is_full_file_read(value.get("tool_input")),
-        Some("Glob") => true,
-        Some("Grep") => false,
         _ => false,
     }
+}
+
+fn bash_command(value: &Value) -> Option<&str> {
+    if value.get("tool_name").and_then(Value::as_str) != Some("Bash") {
+        return None;
+    }
+    value.get("tool_input")?.get("command")?.as_str()
 }
 
 fn is_full_file_read(tool_input: Option<&Value>) -> bool {
@@ -479,94 +493,6 @@ fn is_full_file_read(tool_input: Option<&Value>) -> bool {
     tool_input.get("file_path").is_some()
         && tool_input.get("offset").is_none()
         && tool_input.get("limit").is_none()
-}
-
-fn is_broad_shell_exploration(command: &str) -> bool {
-    let command = command.trim();
-    if command.is_empty()
-        || command.starts_with("wot ")
-        || command == "wot"
-        || command.starts_with("git ")
-        || command.starts_with("cargo ")
-        || command.starts_with("rtk cargo ")
-    {
-        return false;
-    }
-
-    let tokens = shell_words(command);
-    if tokens.is_empty() {
-        return false;
-    }
-
-    match tokens[0].as_str() {
-        "cat" | "head" | "tail" | "nl" | "find" | "fd" => true,
-        "ls" => tokens.iter().any(|token| token.contains('R')),
-        "sed" => is_broad_sed(&tokens),
-        "rg" | "grep" | "ripgrep" => is_broad_search(&tokens),
-        _ => false,
-    }
-}
-
-fn is_broad_sed(tokens: &[String]) -> bool {
-    if !tokens
-        .iter()
-        .any(|token| token == "-n" || token.contains('n'))
-    {
-        return true;
-    }
-
-    tokens
-        .iter()
-        .find_map(|token| parse_sed_line_span(token))
-        .is_some_and(|line_count| line_count > 80)
-}
-
-fn parse_sed_line_span(token: &str) -> Option<usize> {
-    let token = token.strip_suffix('p').unwrap_or(token);
-    let (start, end) = token.split_once(',')?;
-    let start = start.parse::<usize>().ok()?;
-    let end = end.parse::<usize>().ok()?;
-    end.checked_sub(start).map(|delta| delta + 1)
-}
-
-fn is_broad_search(tokens: &[String]) -> bool {
-    if tokens
-        .iter()
-        .skip(1)
-        .any(|token| token == "--files" || token == "-l")
-    {
-        return false;
-    }
-
-    tokens
-        .iter()
-        .skip(1)
-        .all(|token| token.starts_with('-') || token == ".")
-}
-
-fn shell_words(command: &str) -> Vec<String> {
-    let mut words = Vec::new();
-    let mut current = String::new();
-    let mut quote = None;
-
-    for ch in command.chars() {
-        match (quote, ch) {
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), c) => current.push(c),
-            (None, '\'' | '"') => quote = Some(ch),
-            (None, c) if c.is_whitespace() => {
-                if !current.is_empty() {
-                    words.push(std::mem::take(&mut current));
-                }
-            }
-            (None, c) => current.push(c),
-        }
-    }
-
-    if !current.is_empty() {
-        words.push(current);
-    }
-    words
 }
 
 fn list_supported(args: &Args) -> Result<()> {

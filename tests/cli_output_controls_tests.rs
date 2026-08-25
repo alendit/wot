@@ -376,7 +376,7 @@ fn setup_claude_hooks_installs_claude_settings_and_is_idempotent() {
     let pre_tool = settings["hooks"]["PreToolUse"].as_array().unwrap();
     assert_eq!(pre_tool.len(), 2);
     assert_eq!(pre_tool[0]["hooks"][0]["command"], "echo unrelated");
-    assert_eq!(pre_tool[1]["matcher"], "Bash|Read|Glob|Grep");
+    assert_eq!(pre_tool[1]["matcher"], "Bash|Read");
     assert_eq!(pre_tool[1]["hooks"][0]["command"], "wot hook-check");
 }
 
@@ -422,7 +422,7 @@ fn setup_hooks_rejects_invalid_existing_json() {
 }
 
 #[test]
-fn hook_check_emits_advisory_context_for_broad_reads() {
+fn hook_check_rewrites_broad_reads_before_execution() {
     let mut command = Command::cargo_bin("wot").unwrap();
     let output = command
         .arg("hook-check")
@@ -435,6 +435,49 @@ fn hook_check_emits_advisory_context_for_broad_reads() {
     let json: Value = serde_json::from_slice(&output).unwrap();
 
     assert_eq!(json["hookSpecificOutput"]["hookEventName"], "PreToolUse");
+    assert_eq!(json["hookSpecificOutput"]["permissionDecision"], "allow");
+    assert_eq!(
+        json["hookSpecificOutput"]["updatedInput"]["command"],
+        "wot --header src/cli.rs"
+    );
+}
+
+#[test]
+fn hook_check_rewrites_compound_commands() {
+    let mut command = Command::cargo_bin("wot").unwrap();
+    let output = command
+        .arg("hook-check")
+        .write_stdin(
+            r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git status --short && cat src/lib.rs"}}"#,
+        )
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: Value = serde_json::from_slice(&output).unwrap();
+
+    assert_eq!(
+        json["hookSpecificOutput"]["updatedInput"]["command"],
+        "git status --short && wot --header src/lib.rs"
+    );
+}
+
+#[test]
+fn hook_check_keeps_full_read_advisory_for_claude() {
+    let mut command = Command::cargo_bin("wot").unwrap();
+    let output = command
+        .arg("hook-check")
+        .write_stdin(
+            r#"{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"src/cli.rs"}}"#,
+        )
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let json: Value = serde_json::from_slice(&output).unwrap();
+
     assert_eq!(
         json["hookSpecificOutput"]["additionalContext"],
         "Use wot for a file overview."
@@ -447,6 +490,12 @@ fn hook_check_exits_silently_for_exact_or_unrelated_inputs() {
         r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"rg \"hook-check\" src/cli.rs"}}"#,
         r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"rg --files"}}"#,
         r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"wot README.md"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"sed -n '20,60p' src/cli.rs"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"sed -n '1,240p' src/cli.rs"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat src/cli.rs | sha256sum"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat notes.txt"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat AGENTS.md"}}"#,
+        r#"{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cat skills/create-file-outline/SKILL.md"}}"#,
         r#"{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"src/cli.rs","offset":10,"limit":20}}"#,
         r#"{not json"#,
     ] {

@@ -30,8 +30,8 @@ wot setup
 Use `wot setup -g` for `~/.agents`, and add `--claude` to also install into
 `.claude` or `~/.claude`.
 
-Add `--hooks` to install non-blocking PreToolUse reminders to use `wot` for a
-file overview:
+Add `--hooks` to install PreToolUse rewrites that replace eligible broad shell
+reads with `wot` outlines before execution:
 
 ```bash
 wot setup --hooks
@@ -47,6 +47,32 @@ For Codex, `--hooks` writes `.codex/hooks.json` or `~/.codex/hooks.json`. With
 ```bash
 wot [OPTIONS] <file>...
 ```
+
+To estimate the installed Codex hook's token overhead and observational savings
+from rollout transcripts, run the dependency-free bulk analyzer:
+
+```bash
+python3 scripts/analyze_wot_hook.py ~/.codex/sessions/2026
+```
+
+Use `--format json` for machine-readable output. The report uses exact recorded
+tool-output token counts when available and labels its pre/post and substitution
+figures as estimates because transcripts do not contain the no-hook
+counterfactual. Pass `--record-cutoff 2026-08-22T07:00:00Z` to pin a
+reproducible historical snapshot while sessions continue to be appended.
+Use `--compare-hook-text 'previous exact reminder text'` to compare two wording
+variants in equal periods around the first appearance of the primary
+`--hook-text`.
+
+For the silent rewrite hook, audit observed rewrites and same-file recovery
+reads directly:
+
+```bash
+python3 scripts/analyze_wot_hook.py --audit-rewrites ~/.codex/sessions/2026/08/24
+```
+
+This mode detects recorded non-wot commands whose output contains wot file
+headers; it does not rely on model-visible hook messages.
 
 `wot --help` is the authoritative command reference for flags and defaults.
 Use `wot --list-supported` to see the exact recognized language ids, file
@@ -93,14 +119,23 @@ Setup options:
 - `wot setup` installs or refreshes the bundled `create-file-outline` skill in `.agents`.
 - `wot setup --claude` also installs the skill in `.claude`.
 - `wot setup -g` uses user-level roots under `~/.agents`, `~/.codex`, and `~/.claude`.
-- `wot setup --hooks` installs advisory PreToolUse hooks for the selected setup targets.
+- `wot setup --hooks` installs PreToolUse command-rewrite hooks for the selected setup targets.
 - `wot setup -g --hooks` installs the same hooks in user-level Codex and agent roots.
-- `wot setup --claude --hooks` installs both the agent skill and hook reminders for Claude.
+- `wot setup --claude --hooks` installs both the agent skill and hooks for Claude.
 
-The hook runs `wot hook-check` before supported tool use. It never blocks,
-asks for approval, rewrites tool input, or replaces normal skill guidance. When
-the pending tool call looks like broad file exploration, it injects a brief
-model-visible reminder to use `wot` for a file overview.
+The hook runs `wot hook-check` before supported tool use. For explicit supported
+files, it rewrites whole-file `cat`, `nl`, and `sed -n '1,$p'` displays to
+`wot --header`. The normal 40-line threshold keeps small files verbatim. The
+hook handles eligible segments in simple `&&`, `;`, or newline command lists.
+It preserves every bounded numeric range and never rewrites `AGENTS.md`,
+`CLAUDE.md`, or `SKILL.md`. Pipelines, redirects, shell expansions,
+substitutions, transformations, `head`/`tail`, stdin, and unsupported files also
+remain unchanged.
+
+Codex receives the rewritten Bash input directly, so there is no repeated
+model-visible reminder. Claude Bash calls use the same policy; full-file Claude
+`Read` calls retain the short advisory because that tool cannot be replaced by
+a Bash command rewrite. The hook never blocks or asks for approval.
 
 ## Release
 

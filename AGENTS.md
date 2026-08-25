@@ -18,18 +18,6 @@
 - A broad `ssh <host>` rule should only be used for commands that are truly about that host.
 - Prefer narrower ssh prefixes for specific services on that host such as container inspection or container exec.
 
-## RTK Command Policy
-
-- Prefix shell commands with `rtk` by default.
-- Exception: run git write commands directly, without `rtk`:
-  - `git add`
-  - `git commit`
-  - `git push`
-- Examples:
-  - `rtk cargo test`
-  - `rtk cargo fmt --check`
-  - `rtk cargo clippy --all-targets --all-features`
-
 ## Git Write Safety
 
 - Never run git write operations in parallel.
