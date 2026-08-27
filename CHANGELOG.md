@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 - 2026-08-27
+
+- Refocus the bundled `create-file-outline` skill on autonomous read routing:
+  use `rg` for exact searches, direct reads for known narrow ranges, and `wot`
+  before exploratory broad or multi-file reads.
+- Remove installation and hook mechanics from the model-facing skill so its
+  selection boundary and outline-first workflow are visible immediately.
+
 ## 0.4.0 - 2026-08-25
 
 - Treat directory positional inputs as recursive outline roots by default, with
