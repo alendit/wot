@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 - 2026-08-27
+
+- Add a top-level `--version` flag that reports the installed `wot` package
+  version, with process-level coverage and usage documentation.
+
 ## 0.5.0 - 2026-08-27
 
 - Refocus the bundled `create-file-outline` skill on autonomous read routing:
