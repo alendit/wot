@@ -15,6 +15,17 @@ fn exits_nonzero_without_input_files() {
 }
 
 #[test]
+fn reports_package_version() {
+    let mut command = Command::cargo_bin("wot").unwrap();
+
+    command
+        .arg("--version")
+        .assert()
+        .success()
+        .stdout(format!("wot {}\n", env!("CARGO_PKG_VERSION")));
+}
+
+#[test]
 fn outlines_multiple_files_in_input_order() {
     let directory = tempdir().unwrap();
     let markdown = directory.path().join("doc.md");

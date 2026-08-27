@@ -33,6 +33,7 @@ enum OutputFormat {
 #[derive(Debug, Parser)]
 #[command(
     name = "wot",
+    version,
     about = "Create compact outlines from source, config, and document files",
     override_usage = "wot [OPTIONS] <path>...\n       wot setup [OPTIONS]\n       wot hook-check",
     long_about = "Create compact Markdown table-of-contents style outlines from source, config, and document files. Directory inputs are traversed recursively.\n\nSupported inputs include Rust, TypeScript/JavaScript, Go, C/C++, Java, Kotlin, C#, shell, Clojure, Emacs Lisp, Markdown, Python, JSON, YAML, TOML, INI, .env, XML/SVG/plist, HCL/Terraform, Dockerfile/Containerfile, and Jupyter notebooks.\n\nRanges are 1-based inclusive line ranges. When line-only ranges would be ambiguous, wot prints 1-based start-inclusive/end-exclusive columns as Lx:Cy-Lx:Cz."

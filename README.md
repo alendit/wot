@@ -48,6 +48,8 @@ For Codex, `--hooks` writes `.codex/hooks.json` or `~/.codex/hooks.json`. With
 wot [OPTIONS] <path>...
 ```
 
+Run `wot --version` to report the installed package version.
+
 Each path may be a supported file or a directory. Directory inputs are traversed
 automatically to a default depth of `3`, with the target directory at depth `0`.
 The Markdown output nests each discovered file's outline or short verbatim
